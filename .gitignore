@@ -1,0 +1,20 @@
+## .NET / C#
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+.vs/
+*.nupkg
+*.snupkg
+
+## Rider / VS
+.idea/
+*.DotSettings.user
+
+## OS
+.DS_Store
+Thumbs.db
+
+## BenchmarkDotNet
+BenchmarkDotNet.Artifacts/
