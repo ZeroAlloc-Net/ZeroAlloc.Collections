@@ -14,5 +14,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/ZeroAlloc.Collections/ZeroAlloc.Collections.csproj" />
+    <ProjectReference Include="../../src/ZeroAlloc.Collections.Generators/ZeroAlloc.Collections.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>
