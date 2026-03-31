@@ -16,8 +16,11 @@
                       ReferenceOutputAssembly="false" />
   </ItemGroup>
 
-  <!-- Ensure the generator is built before packing so the DLL exists -->
-  <Target Name="BuildGeneratorBeforePack" BeforeTargets="GenerateNuspec">
+  <!-- Ensure the generator is built before packing so the DLL exists.
+       Skipped when NoBuild=true (e.g. dotnet pack - -no-build) because the
+       caller is responsible for having already built everything. -->
+  <Target Name="BuildGeneratorBeforePack" BeforeTargets="GenerateNuspec"
+          Condition="'$(NoBuild)' != 'true'">
     <MSBuild Projects="$(MSBuildProjectDirectory)/../ZeroAlloc.Collections.Generators/ZeroAlloc.Collections.Generators.csproj"
              Properties="Configuration=$(Configuration)"
              Targets="Build" />

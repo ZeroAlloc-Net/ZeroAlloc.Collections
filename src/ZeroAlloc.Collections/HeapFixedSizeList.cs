@@ -3,11 +3,23 @@ using System.Runtime.CompilerServices;
 
 namespace ZeroAlloc.Collections;
 
+/// <summary>
+/// A heap-storable fixed-capacity list backed by a plain managed array.
+/// Unlike <see cref="FixedSizeList{T}"/> (a ref struct), this is a sealed class that can be
+/// stored on the heap, passed across async boundaries, and used with interfaces.
+/// The capacity is fixed at construction time and cannot grow.
+/// </summary>
+/// <typeparam name="T">The type of elements in the list.</typeparam>
 public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
 {
     private readonly T[] _items;
     private int _count;
 
+    /// <summary>
+    /// Initializes a new <see cref="HeapFixedSizeList{T}"/> with the specified capacity.
+    /// </summary>
+    /// <param name="capacity">The maximum number of elements the list can hold.</param>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="capacity"/> is negative.</exception>
     public HeapFixedSizeList(int capacity)
     {
         if (capacity < 0)
@@ -16,11 +28,19 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         _count = 0;
     }
 
+    /// <inheritdoc/>
     public int Count => _count;
+
+    /// <summary>Gets the maximum number of elements the list can hold.</summary>
     public int Capacity => _items.Length;
+
+    /// <summary>Gets a value indicating whether the list has reached capacity.</summary>
     public bool IsFull => _count == _items.Length;
+
+    /// <inheritdoc/>
     public bool IsReadOnly => false;
 
+    /// <inheritdoc/>
     public T this[int index]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -39,6 +59,8 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         }
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The list is already at capacity.</exception>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Add(T item)
     {
@@ -47,6 +69,11 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         _items[_count++] = item;
     }
 
+    /// <summary>
+    /// Attempts to append an item to the end of the list.
+    /// </summary>
+    /// <param name="item">The item to add.</param>
+    /// <returns><c>true</c> if the item was added; <c>false</c> if the list is full.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryAdd(T item)
     {
@@ -55,6 +82,8 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         return true;
     }
 
+    /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">The list is already at capacity.</exception>
     public void Insert(int index, T item)
     {
         if ((uint)index > (uint)_count)
@@ -69,6 +98,7 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         _count++;
     }
 
+    /// <inheritdoc/>
     public void RemoveAt(int index)
     {
         if ((uint)index >= (uint)_count)
@@ -82,6 +112,7 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
             _items[_count] = default!;
     }
 
+    /// <inheritdoc/>
     public bool Remove(T item)
     {
         int index = IndexOf(item);
@@ -90,13 +121,13 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         return true;
     }
 
+    /// <inheritdoc/>
     public bool Contains(T item) => IndexOf(item) >= 0;
 
-    public int IndexOf(T item)
-    {
-        return Array.IndexOf(_items, item, 0, _count);
-    }
+    /// <inheritdoc/>
+    public int IndexOf(T item) => Array.IndexOf(_items, item, 0, _count);
 
+    /// <inheritdoc/>
     public void Clear()
     {
         if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
@@ -104,11 +135,18 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         _count = 0;
     }
 
+    /// <inheritdoc/>
     public void CopyTo(T[] array, int arrayIndex)
     {
-        Array.Copy(_items, 0, array, arrayIndex, _count);
+        if (array is null) throw new ArgumentNullException(nameof(array));
+        if (arrayIndex < 0 || arrayIndex + _count > array.Length)
+            throw new ArgumentOutOfRangeException(nameof(arrayIndex));
+        if (_count > 0)
+            Array.Copy(_items, 0, array, arrayIndex, _count);
     }
 
+    /// <summary>Copies the active elements to a new managed array.</summary>
+    /// <returns>A new array containing the elements.</returns>
     public T[] ToArray()
     {
         if (_count == 0) return Array.Empty<T>();
@@ -117,6 +155,7 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         return result;
     }
 
+    /// <inheritdoc/>
     public IEnumerator<T> GetEnumerator()
     {
         for (int i = 0; i < _count; i++)

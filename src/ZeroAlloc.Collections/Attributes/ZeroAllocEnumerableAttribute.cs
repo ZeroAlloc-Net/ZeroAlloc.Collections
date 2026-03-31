@@ -5,19 +5,9 @@ namespace ZeroAlloc.Collections;
 /// </summary>
 /// <remarks>
 /// The generator locates the backing array and element count by inspecting the type's fields.
-/// If the type has multiple array fields or multiple <c>int</c> fields, specify
-/// <paramref name="arrayFieldName"/> and <paramref name="countFieldName"/> explicitly to avoid ambiguity.
+/// If the type has multiple array fields or multiple <c>int</c> fields, use the overload that
+/// accepts explicit field names to avoid ambiguity.
 /// </remarks>
-/// <param name="arrayFieldName">
-/// The name of the field that holds the backing array (e.g. <c>"_items"</c>).
-/// When <c>null</c>, the generator picks the first non-static array field it finds
-/// and emits a diagnostic if multiple candidates exist.
-/// </param>
-/// <param name="countFieldName">
-/// The name of the field that holds the element count (e.g. <c>"_count"</c>).
-/// When <c>null</c>, the generator picks the first non-static <c>int</c> field it finds
-/// and emits a diagnostic if multiple candidates exist.
-/// </param>
 [AttributeUsage(AttributeTargets.Struct | AttributeTargets.Class, Inherited = false)]
 public sealed class ZeroAllocEnumerableAttribute : Attribute
 {
@@ -29,8 +19,8 @@ public sealed class ZeroAllocEnumerableAttribute : Attribute
     /// <summary>
     /// Marks the type for zero-allocation enumerator generation with explicit field names.
     /// </summary>
-    /// <param name="arrayFieldName">The name of the backing array field.</param>
-    /// <param name="countFieldName">The name of the count field.</param>
+    /// <param name="arrayFieldName">The name of the backing array field (e.g. <c>"_items"</c>).</param>
+    /// <param name="countFieldName">The name of the count field (e.g. <c>"_count"</c>).</param>
     public ZeroAllocEnumerableAttribute(string arrayFieldName, string countFieldName)
     {
         ArrayFieldName = arrayFieldName;
