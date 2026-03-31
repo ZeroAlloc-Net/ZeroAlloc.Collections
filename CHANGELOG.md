@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.2](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.1...v0.1.2) (2026-03-31)
+
+
+### Bug Fixes
+
+* address all code review issues — pooling, correctness, and API consistency ([d596b81](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/d596b817efd3af429affa779538d4619e770bc0f))
+* generator diagnostics, incremental caching, and RingBuffer over-clear ([df9e710](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/df9e7102dd1afc7d98eaa0661c44a2f3984b6e93))
+* generator diagnostics, incremental caching, and RingBuffer over-clear ([f137fd5](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/f137fd52b4a0afe05881963a45288898b2d9ef59))
+
 ## [0.1.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.0...v0.1.1) (2026-03-31)
 
 
