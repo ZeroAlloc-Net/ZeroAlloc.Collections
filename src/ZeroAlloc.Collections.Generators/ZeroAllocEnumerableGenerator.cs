@@ -38,32 +38,35 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var targets = context.SyntaxProvider.ForAttributeWithMetadataName(
+        // Use unfiltered provider so diagnostics can be emitted even when generation is skipped
+        var allTargets = context.SyntaxProvider.ForAttributeWithMetadataName(
             AttributeFullName,
             predicate: static (node, _) => node is TypeDeclarationSyntax,
-            transform: static (ctx, _) => GetModel(ctx))
-            .Where(static m => m is not null)
+            transform: static (ctx, _) => GetModel(ctx));
+
+        // Emit diagnostics for every target (including error cases that return null code gen)
+        context.RegisterSourceOutput(allTargets, static (spc, model) =>
+        {
+            if (model is null) return;
+            foreach (var diag in model.Value.Diagnostics)
+                spc.ReportDiagnostic(diag);
+        });
+
+        // Only generate code for models that resolved successfully
+        var codeTargets = allTargets
+            .Where(static m => m is not null && !m.Value.HasErrors)
             .Select(static (m, _) => m!.Value);
 
-        context.RegisterSourceOutput(targets, static (spc, model) =>
-        {
-            // Emit diagnostics
-            foreach (var diag in model.Diagnostics)
-                spc.ReportDiagnostic(diag);
-
-            // Only generate if no errors
-            if (!model.HasErrors)
-                Execute(spc, model);
-        });
+        context.RegisterSourceOutput(codeTargets, static (spc, model) => Execute(spc, model));
     }
 
     private static GeneratorModel? GetModel(GeneratorAttributeSyntaxContext ctx)
     {
         var typeSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
-        var diagnostics = new List<Diagnostic>();
+        var diagnosticsBuilder = ImmutableArray.CreateBuilder<Diagnostic>();
         bool hasErrors = false;
 
-        // Read explicit names from attribute constructor arguments (named args use positional)
+        // Read explicit names from attribute constructor arguments
         string? explicitArrayFieldName = null;
         string? explicitCountFieldName = null;
 
@@ -98,19 +101,19 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
             arrayField = arrayFields.Find(f => f.Name == explicitArrayFieldName);
             if (arrayField is null)
             {
-                diagnostics.Add(Diagnostic.Create(FieldNotFound,
+                diagnosticsBuilder.Add(Diagnostic.Create(FieldNotFound,
                     ctx.TargetNode.GetLocation(), typeSymbol.Name, explicitArrayFieldName));
                 hasErrors = true;
             }
         }
         else if (arrayFields.Count == 0)
         {
-            return null; // No array field — not applicable
+            return null; // No array field — attribute not applicable to this type
         }
         else
         {
             if (arrayFields.Count > 1)
-                diagnostics.Add(Diagnostic.Create(AmbiguousArrayField,
+                diagnosticsBuilder.Add(Diagnostic.Create(AmbiguousArrayField,
                     ctx.TargetNode.GetLocation(), typeSymbol.Name));
             arrayField = arrayFields[0];
         }
@@ -122,27 +125,39 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
             countField = countFields.Find(f => f.Name == explicitCountFieldName);
             if (countField is null)
             {
-                diagnostics.Add(Diagnostic.Create(FieldNotFound,
+                diagnosticsBuilder.Add(Diagnostic.Create(FieldNotFound,
                     ctx.TargetNode.GetLocation(), typeSymbol.Name, explicitCountFieldName));
                 hasErrors = true;
             }
         }
         else if (countFields.Count == 0)
         {
-            return null; // No count field — not applicable
+            return null; // No int field — attribute not applicable to this type
         }
         else
         {
             if (countFields.Count > 1)
-                diagnostics.Add(Diagnostic.Create(AmbiguousCountField,
+                diagnosticsBuilder.Add(Diagnostic.Create(AmbiguousCountField,
                     ctx.TargetNode.GetLocation(), typeSymbol.Name));
             countField = countFields[0];
         }
 
-        if (arrayField is null || countField is null)
-            return null;
+        // If we have errors (missing named fields), still return a model so diagnostics get emitted
+        if (hasErrors)
+        {
+            return new GeneratorModel(
+                Namespace: null,
+                TypeName: typeSymbol.Name,
+                ArrayFieldName: string.Empty,
+                CountFieldName: string.Empty,
+                ElementTypeFullName: string.Empty,
+                IsStruct: false,
+                Accessibility: typeSymbol.DeclaredAccessibility,
+                Diagnostics: diagnosticsBuilder.ToImmutable(),
+                HasErrors: true);
+        }
 
-        var arrayElementType = ((IArrayTypeSymbol)arrayField.Type)
+        var arrayElementType = ((IArrayTypeSymbol)arrayField!.Type)
             .ElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
@@ -153,12 +168,12 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
             Namespace: ns,
             TypeName: typeSymbol.Name,
             ArrayFieldName: arrayField.Name,
-            CountFieldName: countField.Name,
+            CountFieldName: countField!.Name,
             ElementTypeFullName: arrayElementType,
             IsStruct: typeSymbol.IsValueType,
             Accessibility: typeSymbol.DeclaredAccessibility,
-            Diagnostics: diagnostics,
-            HasErrors: hasErrors);
+            Diagnostics: diagnosticsBuilder.ToImmutable(),
+            HasErrors: false);
     }
 
     private static void Execute(SourceProductionContext spc, GeneratorModel model)
@@ -259,6 +274,6 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
         string ElementTypeFullName,
         bool IsStruct,
         Accessibility Accessibility,
-        List<Diagnostic> Diagnostics,
+        ImmutableArray<Diagnostic> Diagnostics,  // ImmutableArray has structural equality — safe for incremental caching
         bool HasErrors);
 }

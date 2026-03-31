@@ -108,7 +108,8 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
             }
             else
             {
-                Array.Clear(_array, _head, _array.Length - _head);
+                // Use _capacity (not _array.Length) — the rented buffer may be larger than capacity
+                Array.Clear(_array, _head, _capacity - _head);
                 if (_tail > 0) Array.Clear(_array, 0, _tail);
             }
         }
