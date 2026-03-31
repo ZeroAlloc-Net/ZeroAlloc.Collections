@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.3](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.2...v0.1.3) (2026-03-31)
+
+
+### Bug Fixes
+
+* repair release pack — NoBuild conflict, XML docs, and analyzer release tracking ([1bab2c9](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/1bab2c9d6638f137c833f49139f9e67cd481ceac))
+* repair release pack — NoBuild conflict, XML docs, and analyzer tracking ([686208a](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/686208ab042a2ebd0fe45b936a84133b265a663a))
+
 ## [0.1.2](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.1...v0.1.2) (2026-03-31)
 
 
