@@ -12,6 +12,30 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
 {
     private const string AttributeFullName = "ZeroAlloc.Collections.ZeroAllocEnumerableAttribute";
 
+    private static readonly DiagnosticDescriptor AmbiguousArrayField = new(
+        id: "ZAC010",
+        title: "Ambiguous backing array field",
+        messageFormat: "Type '{0}' has multiple array fields; specify arrayFieldName in [ZeroAllocEnumerable] to avoid ambiguity",
+        category: "ZeroAlloc.Collections.Generators",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor AmbiguousCountField = new(
+        id: "ZAC011",
+        title: "Ambiguous count field",
+        messageFormat: "Type '{0}' has multiple int fields; specify countFieldName in [ZeroAllocEnumerable] to avoid ambiguity",
+        category: "ZeroAlloc.Collections.Generators",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor FieldNotFound = new(
+        id: "ZAC012",
+        title: "Field not found",
+        messageFormat: "Type '{0}' does not have a field named '{1}'",
+        category: "ZeroAlloc.Collections.Generators",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         var targets = context.SyntaxProvider.ForAttributeWithMetadataName(
@@ -21,36 +45,105 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
             .Where(static m => m is not null)
             .Select(static (m, _) => m!.Value);
 
-        context.RegisterSourceOutput(targets, static (spc, model) => Execute(spc, model));
+        context.RegisterSourceOutput(targets, static (spc, model) =>
+        {
+            // Emit diagnostics
+            foreach (var diag in model.Diagnostics)
+                spc.ReportDiagnostic(diag);
+
+            // Only generate if no errors
+            if (!model.HasErrors)
+                Execute(spc, model);
+        });
     }
 
     private static GeneratorModel? GetModel(GeneratorAttributeSyntaxContext ctx)
     {
         var typeSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
+        var diagnostics = new List<Diagnostic>();
+        bool hasErrors = false;
 
-        // Find the array field and count field
-        string? arrayFieldName = null;
-        string? arrayElementType = null;
-        string? countFieldName = null;
+        // Read explicit names from attribute constructor arguments (named args use positional)
+        string? explicitArrayFieldName = null;
+        string? explicitCountFieldName = null;
+
+        var attr = ctx.Attributes.FirstOrDefault(a =>
+            a.AttributeClass?.ToDisplayString() == AttributeFullName);
+
+        if (attr is not null && attr.ConstructorArguments.Length == 2)
+        {
+            explicitArrayFieldName = attr.ConstructorArguments[0].Value as string;
+            explicitCountFieldName = attr.ConstructorArguments[1].Value as string;
+        }
+
+        // Collect field candidates
+        var arrayFields = new List<IFieldSymbol>();
+        var countFields = new List<IFieldSymbol>();
 
         foreach (var member in typeSymbol.GetMembers())
         {
             if (member is IFieldSymbol field && !field.IsStatic)
             {
-                if (field.Type is IArrayTypeSymbol arrayType && arrayFieldName is null)
-                {
-                    arrayFieldName = field.Name;
-                    arrayElementType = arrayType.ElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
-                }
-                else if (field.Type.SpecialType == SpecialType.System_Int32 && countFieldName is null)
-                {
-                    countFieldName = field.Name;
-                }
+                if (field.Type is IArrayTypeSymbol)
+                    arrayFields.Add(field);
+                else if (field.Type.SpecialType == SpecialType.System_Int32)
+                    countFields.Add(field);
             }
         }
 
-        if (arrayFieldName is null || arrayElementType is null || countFieldName is null)
+        // Resolve array field
+        IFieldSymbol? arrayField = null;
+        if (explicitArrayFieldName is not null)
+        {
+            arrayField = arrayFields.Find(f => f.Name == explicitArrayFieldName);
+            if (arrayField is null)
+            {
+                diagnostics.Add(Diagnostic.Create(FieldNotFound,
+                    ctx.TargetNode.GetLocation(), typeSymbol.Name, explicitArrayFieldName));
+                hasErrors = true;
+            }
+        }
+        else if (arrayFields.Count == 0)
+        {
+            return null; // No array field — not applicable
+        }
+        else
+        {
+            if (arrayFields.Count > 1)
+                diagnostics.Add(Diagnostic.Create(AmbiguousArrayField,
+                    ctx.TargetNode.GetLocation(), typeSymbol.Name));
+            arrayField = arrayFields[0];
+        }
+
+        // Resolve count field
+        IFieldSymbol? countField = null;
+        if (explicitCountFieldName is not null)
+        {
+            countField = countFields.Find(f => f.Name == explicitCountFieldName);
+            if (countField is null)
+            {
+                diagnostics.Add(Diagnostic.Create(FieldNotFound,
+                    ctx.TargetNode.GetLocation(), typeSymbol.Name, explicitCountFieldName));
+                hasErrors = true;
+            }
+        }
+        else if (countFields.Count == 0)
+        {
+            return null; // No count field — not applicable
+        }
+        else
+        {
+            if (countFields.Count > 1)
+                diagnostics.Add(Diagnostic.Create(AmbiguousCountField,
+                    ctx.TargetNode.GetLocation(), typeSymbol.Name));
+            countField = countFields[0];
+        }
+
+        if (arrayField is null || countField is null)
             return null;
+
+        var arrayElementType = ((IArrayTypeSymbol)arrayField.Type)
+            .ElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
             ? null
@@ -59,11 +152,13 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
         return new GeneratorModel(
             Namespace: ns,
             TypeName: typeSymbol.Name,
-            ArrayFieldName: arrayFieldName,
-            CountFieldName: countFieldName,
+            ArrayFieldName: arrayField.Name,
+            CountFieldName: countField.Name,
             ElementTypeFullName: arrayElementType,
             IsStruct: typeSymbol.IsValueType,
-            Accessibility: typeSymbol.DeclaredAccessibility);
+            Accessibility: typeSymbol.DeclaredAccessibility,
+            Diagnostics: diagnostics,
+            HasErrors: hasErrors);
     }
 
     private static void Execute(SourceProductionContext spc, GeneratorModel model)
@@ -163,5 +258,7 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
         string CountFieldName,
         string ElementTypeFullName,
         bool IsStruct,
-        Accessibility Accessibility);
+        Accessibility Accessibility,
+        List<Diagnostic> Diagnostics,
+        bool HasErrors);
 }

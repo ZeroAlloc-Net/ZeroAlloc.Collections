@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -7,6 +8,7 @@ namespace ZeroAlloc.Collections;
 /// <summary>
 /// A heap-storable dictionary using open addressing with linear probing.
 /// Same hash map logic as <see cref="SpanDictionary{TKey, TValue}"/> but usable as a class field.
+/// The backing entry array is rented from <see cref="ArrayPool{T}"/> and returned on <see cref="Dispose"/>.
 /// </summary>
 /// <typeparam name="TKey">The type of keys.</typeparam>
 /// <typeparam name="TValue">The type of values.</typeparam>
@@ -28,25 +30,31 @@ public sealed class HeapSpanDictionary<TKey, TValue>
         public EntryState State;
     }
 
-    private Entry[] _entries;
+    private Entry[]? _entries;
     private int _count;
     private readonly EqualityComparer<TKey> _comparer;
+    private readonly ArrayPool<Entry> _pool;
 
     private const int DefaultCapacity = 4;
 
     /// <summary>
     /// Initializes a new <see cref="HeapSpanDictionary{TKey, TValue}"/> with default capacity.
+    /// The backing entry array is rented from <see cref="ArrayPool{T}.Shared"/>.
     /// </summary>
     public HeapSpanDictionary() : this(DefaultCapacity) { }
 
     /// <summary>
     /// Initializes a new <see cref="HeapSpanDictionary{TKey, TValue}"/> with the specified capacity.
+    /// The backing entry array is rented from <see cref="ArrayPool{T}.Shared"/>.
     /// </summary>
     /// <param name="capacity">The initial capacity.</param>
     public HeapSpanDictionary(int capacity)
     {
         if (capacity < 1) capacity = DefaultCapacity;
-        _entries = new Entry[capacity];
+        _pool = ArrayPool<Entry>.Shared;
+        _entries = _pool.Rent(capacity);
+        // ArrayPool may return a dirty buffer — always clear so all slots start as Empty
+        Array.Clear(_entries, 0, _entries.Length);
         _count = 0;
         _comparer = EqualityComparer<TKey>.Default;
     }
@@ -80,7 +88,7 @@ public sealed class HeapSpanDictionary<TKey, TValue>
         get
         {
             var keys = new List<TKey>(_count);
-            for (int i = 0; i < _entries.Length; i++)
+            for (int i = 0; i < _entries!.Length; i++)
             {
                 if (_entries[i].State == EntryState.Occupied)
                     keys.Add(_entries[i].Key);
@@ -95,7 +103,7 @@ public sealed class HeapSpanDictionary<TKey, TValue>
         get
         {
             var values = new List<TValue>(_count);
-            for (int i = 0; i < _entries.Length; i++)
+            for (int i = 0; i < _entries!.Length; i++)
             {
                 if (_entries[i].State == EntryState.Occupied)
                     values.Add(_entries[i].Value);
@@ -123,7 +131,7 @@ public sealed class HeapSpanDictionary<TKey, TValue>
     {
         var entries = _entries;
         int hash = GetHash(key);
-        int capacity = entries.Length;
+        int capacity = entries!.Length;
 
         for (int i = 0; i < capacity; i++)
         {
@@ -165,7 +173,7 @@ public sealed class HeapSpanDictionary<TKey, TValue>
     {
         var entries = _entries;
         int hash = GetHash(key);
-        int capacity = entries.Length;
+        int capacity = entries!.Length;
 
         for (int i = 0; i < capacity; i++)
         {
@@ -204,7 +212,8 @@ public sealed class HeapSpanDictionary<TKey, TValue>
     /// <inheritdoc/>
     public void Clear()
     {
-        Array.Clear(_entries, 0, _entries.Length);
+        if (_entries is not null)
+            Array.Clear(_entries, 0, _entries.Length);
         _count = 0;
     }
 
@@ -215,7 +224,7 @@ public sealed class HeapSpanDictionary<TKey, TValue>
         if (arrayIndex < 0 || arrayIndex + _count > array.Length)
             throw new ArgumentOutOfRangeException(nameof(arrayIndex));
 
-        for (int i = 0; i < _entries.Length; i++)
+        for (int i = 0; i < _entries!.Length; i++)
         {
             if (_entries[i].State == EntryState.Occupied)
             {
@@ -227,7 +236,7 @@ public sealed class HeapSpanDictionary<TKey, TValue>
     /// <inheritdoc/>
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
     {
-        for (int i = 0; i < _entries.Length; i++)
+        for (int i = 0; i < _entries!.Length; i++)
         {
             if (_entries[i].State == EntryState.Occupied)
                 yield return new KeyValuePair<TKey, TValue>(_entries[i].Key, _entries[i].Value);
@@ -236,11 +245,18 @@ public sealed class HeapSpanDictionary<TKey, TValue>
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Returns the rented entry array to the pool.
+    /// </summary>
     public void Dispose()
     {
-        _entries = null!;
-        _count = 0;
+        var entries = _entries;
+        if (entries is not null)
+        {
+            _entries = null;
+            _count = 0;
+            _pool.Return(entries, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Entry>());
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -252,14 +268,14 @@ public sealed class HeapSpanDictionary<TKey, TValue>
     /// <returns>true if inserted or updated; false if key existed and insertOnly was true.</returns>
     private bool TryInsert(TKey key, TValue value, bool insertOnly)
     {
-        if ((_count + 1) * 4 >= _entries.Length * 3)
+        if ((_count + 1) * 4 >= _entries!.Length * 3)
         {
             Grow();
         }
 
         var entries = _entries;
         int hash = GetHash(key);
-        int capacity = entries.Length;
+        int capacity = entries!.Length;
         int firstDeletedIndex = -1;
 
         for (int i = 0; i < capacity; i++)
@@ -313,11 +329,14 @@ public sealed class HeapSpanDictionary<TKey, TValue>
 
     private void Grow()
     {
-        int newCapacity = _entries.Length * 2;
+        int newCapacity = _entries!.Length * 2;
         if (newCapacity < DefaultCapacity) newCapacity = DefaultCapacity;
 
-        var newEntries = new Entry[newCapacity];
+        var newEntries = _pool.Rent(newCapacity);
         var oldEntries = _entries;
+
+        // Clear the rented array — ArrayPool may return a dirty buffer
+        Array.Clear(newEntries, 0, newEntries.Length);
 
         for (int i = 0; i < oldEntries.Length; i++)
         {
@@ -338,5 +357,6 @@ public sealed class HeapSpanDictionary<TKey, TValue>
         }
 
         _entries = newEntries;
+        _pool.Return(oldEntries, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Entry>());
     }
 }

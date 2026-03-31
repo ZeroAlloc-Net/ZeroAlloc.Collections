@@ -16,9 +16,16 @@
                       ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <!-- Ensure the generator is built before packing so the DLL exists -->
+  <Target Name="BuildGeneratorBeforePack" BeforeTargets="GenerateNuspec">
+    <MSBuild Projects="$(MSBuildProjectDirectory)/../ZeroAlloc.Collections.Generators/ZeroAlloc.Collections.Generators.csproj"
+             Properties="Configuration=$(Configuration)"
+             Targets="Build" />
+  </Target>
+
   <!-- Pack generator DLL into analyzers folder -->
   <ItemGroup>
-    <None Include="../ZeroAlloc.Collections.Generators/bin/$(Configuration)/netstandard2.0/ZeroAlloc.Collections.Generators.dll"
+    <None Include="$(MSBuildProjectDirectory)/../ZeroAlloc.Collections.Generators/bin/$(Configuration)/netstandard2.0/ZeroAlloc.Collections.Generators.dll"
           Pack="true"
           PackagePath="analyzers/dotnet/cs"
           Visible="false" />

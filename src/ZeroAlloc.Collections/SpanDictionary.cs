@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -6,6 +7,7 @@ namespace ZeroAlloc.Collections;
 /// <summary>
 /// A stack-only dictionary using open addressing with linear probing.
 /// Avoids per-node allocations unlike the BCL <see cref="Dictionary{TKey, TValue}"/>.
+/// The backing entry array is rented from <see cref="ArrayPool{T}"/> and returned on <see cref="Dispose"/>.
 /// </summary>
 /// <typeparam name="TKey">The type of keys.</typeparam>
 /// <typeparam name="TValue">The type of values.</typeparam>
@@ -26,20 +28,25 @@ public ref struct SpanDictionary<TKey, TValue>
         public EntryState State;
     }
 
-    private Entry[] _entries;
+    private Entry[]? _entries;
     private int _count;
     private readonly EqualityComparer<TKey> _comparer;
+    private readonly ArrayPool<Entry> _pool;
 
     private const int DefaultCapacity = 4;
 
     /// <summary>
     /// Initializes a new <see cref="SpanDictionary{TKey, TValue}"/> with the specified capacity.
+    /// The backing entry array is rented from <see cref="ArrayPool{T}.Shared"/>.
     /// </summary>
     /// <param name="capacity">The initial capacity.</param>
     public SpanDictionary(int capacity)
     {
         if (capacity < 1) capacity = DefaultCapacity;
-        _entries = new Entry[capacity];
+        _pool = ArrayPool<Entry>.Shared;
+        _entries = _pool.Rent(capacity);
+        // ArrayPool may return a dirty buffer — always clear so all slots start as Empty
+        Array.Clear(_entries, 0, _entries.Length);
         _count = 0;
         _comparer = EqualityComparer<TKey>.Default;
     }
@@ -87,7 +94,7 @@ public ref struct SpanDictionary<TKey, TValue>
     {
         var entries = _entries;
         int hash = GetHash(key);
-        int capacity = entries.Length;
+        int capacity = entries!.Length;
 
         for (int i = 0; i < capacity; i++)
         {
@@ -126,7 +133,7 @@ public ref struct SpanDictionary<TKey, TValue>
     {
         var entries = _entries;
         int hash = GetHash(key);
-        int capacity = entries.Length;
+        int capacity = entries!.Length;
 
         for (int i = 0; i < capacity; i++)
         {
@@ -156,7 +163,8 @@ public ref struct SpanDictionary<TKey, TValue>
     /// </summary>
     public void Clear()
     {
-        Array.Clear(_entries, 0, _entries.Length);
+        if (_entries is not null)
+            Array.Clear(_entries, 0, _entries.Length);
         _count = 0;
     }
 
@@ -164,15 +172,20 @@ public ref struct SpanDictionary<TKey, TValue>
     /// Returns an enumerator that iterates through the occupied entries.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Enumerator GetEnumerator() => new Enumerator(_entries);
+    public Enumerator GetEnumerator() => new Enumerator(_entries!);
 
     /// <summary>
-    /// Clears internal state. No pool return is needed since the backing array is allocated directly.
+    /// Returns the rented entry array to the pool.
     /// </summary>
     public void Dispose()
     {
-        _entries = null!;
-        _count = 0;
+        var entries = _entries;
+        if (entries is not null)
+        {
+            _entries = null;
+            _count = 0;
+            _pool.Return(entries, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Entry>());
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -185,14 +198,14 @@ public ref struct SpanDictionary<TKey, TValue>
     private bool TryInsert(TKey key, TValue value, bool insertOnly)
     {
         // Check load factor before insert
-        if ((_count + 1) * 4 >= _entries.Length * 3)
+        if ((_count + 1) * 4 >= _entries!.Length * 3)
         {
             Grow();
         }
 
         var entries = _entries;
         int hash = GetHash(key);
-        int capacity = entries.Length;
+        int capacity = entries!.Length;
         int firstDeletedIndex = -1;
 
         for (int i = 0; i < capacity; i++)
@@ -250,11 +263,14 @@ public ref struct SpanDictionary<TKey, TValue>
 
     private void Grow()
     {
-        int newCapacity = _entries.Length * 2;
+        int newCapacity = _entries!.Length * 2;
         if (newCapacity < DefaultCapacity) newCapacity = DefaultCapacity;
 
-        var newEntries = new Entry[newCapacity];
+        var newEntries = _pool.Rent(newCapacity);
         var oldEntries = _entries;
+
+        // Clear the rented array — ArrayPool may return a dirty buffer
+        Array.Clear(newEntries, 0, newEntries.Length);
 
         for (int i = 0; i < oldEntries.Length; i++)
         {
@@ -275,6 +291,7 @@ public ref struct SpanDictionary<TKey, TValue>
         }
 
         _entries = newEntries;
+        _pool.Return(oldEntries, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Entry>());
     }
 
     /// <summary>
@@ -298,7 +315,11 @@ public ref struct SpanDictionary<TKey, TValue>
         public KeyValuePair<TKey, TValue> Current
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => new KeyValuePair<TKey, TValue>(_entries[_index].Key, _entries[_index].Value);
+            get
+            {
+                ref readonly Entry e = ref _entries[_index];
+                return new KeyValuePair<TKey, TValue>(e.Key, e.Value);
+            }
         }
 
         /// <summary>

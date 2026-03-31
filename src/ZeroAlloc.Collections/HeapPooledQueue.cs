@@ -101,8 +101,19 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
     /// </summary>
     public void Clear()
     {
-        if (RuntimeHelpers.IsReferenceOrContainsReferences<T>() && _array is not null)
-            Array.Clear(_array, 0, _array.Length);
+        if (RuntimeHelpers.IsReferenceOrContainsReferences<T>() && _array is not null && _count > 0)
+        {
+            // Only clear the live elements, not the entire rented buffer
+            if (_head < _tail)
+            {
+                Array.Clear(_array, _head, _count);
+            }
+            else
+            {
+                Array.Clear(_array, _head, _array.Length - _head);
+                if (_tail > 0) Array.Clear(_array, 0, _tail);
+            }
+        }
         _head = 0;
         _tail = 0;
         _count = 0;
@@ -146,7 +157,7 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
     {
         if (_array is not null)
         {
-            _pool.Return(_array);
+            _pool.Return(_array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             _array = null;
         }
     }
@@ -167,7 +178,7 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
                 Array.Copy(_array, _head, newArray, 0, headToEnd);
                 Array.Copy(_array, 0, newArray, headToEnd, _tail);
             }
-            _pool.Return(_array);
+            _pool.Return(_array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
         _array = newArray;
         _head = 0;

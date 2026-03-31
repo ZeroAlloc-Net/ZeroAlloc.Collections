@@ -70,19 +70,54 @@ The `ref readonly` return also means no defensive copy for large value types.
 
 ## Benchmark Results
 
-Benchmarks are run with BenchmarkDotNet. Full benchmark source is in `tests/ZeroAlloc.Collections.Benchmarks/`.
+Benchmarks are run with BenchmarkDotNet on .NET 9.0, Windows 11, x64 RyuJIT AVX2. Full benchmark source is in `tests/ZeroAlloc.Collections.Benchmarks/`. Run `dotnet run -c Release` in that project to reproduce results on your hardware.
 
-> **Note:** The table below shows the expected structure. Run `dotnet run -c Release` in the benchmarks project to produce results for your hardware.
+### Add N items
 
-| Scenario | BCL Collection | ZeroAlloc Collection | BCL Alloc | ZA Alloc |
-|----------|---------------|---------------------|-----------|----------|
-| Add 1000 items | `List<int>` | `PooledList<int>` | _TBD_ | _TBD_ |
-| Enumerate 1000 items | `List<int>` | `PooledList<int>` | _TBD_ | _TBD_ |
-| Add + lookup 1000 entries | `Dictionary<string, int>` | `SpanDictionary<string, int>` | _TBD_ | _TBD_ |
-| Enqueue/dequeue 1000 items | `Queue<int>` | `PooledQueue<int>` | _TBD_ | _TBD_ |
-| Push/pop 1000 items | `Stack<int>` | `PooledStack<int>` | _TBD_ | _TBD_ |
+| N | BCL (`List<int>`) | `PooledList<int>` | Speedup | BCL Alloc | ZA Alloc |
+|------:|------------------:|------------------:|--------:|----------:|---------:|
+| 100 | 263 ns | 111 ns | 2.4× | 1,184 B | 0 B |
+| 1,000 | 1,330 ns | 681 ns | 2.0× | 8,424 B | 0 B |
+| 10,000 | 15,104 ns | 7,040 ns | 2.1× | 131,400 B | ~1 B |
 
-The key metric is the **Alloc** column. ZeroAlloc collections target 0 B allocated on all paths except initial pool rent and `ToArray()`.
+### Enumerate N items (foreach)
+
+| N | BCL (`List<int>`) | `PooledList<int>` | BCL Alloc | ZA Alloc |
+|------:|------------------:|------------------:|----------:|---------:|
+| 100 | 149 ns | 145 ns | 456 B | 0 B |
+| 1,000 | 1,216 ns | 1,592 ns | 4,056 B | 0 B |
+| 10,000 | 11,980 ns | 11,706 ns | 40,056 B | ~1 B |
+
+> `List<int>` enumerator allocation comes from boxing the `List<T>.Enumerator` struct when accessed through `IEnumerable<T>`. The ZeroAlloc `ref struct` enumerator is never boxed.
+
+### Push/pop N items
+
+| N | BCL (`Stack<int>`) | `PooledStack<int>` | Speedup | BCL Alloc | ZA Alloc |
+|------:|-------------------:|-------------------:|--------:|----------:|---------:|
+| 100 | 357 ns | 197 ns | 1.8× | 1,184 B | 0 B |
+| 1,000 | 2,590 ns | 1,429 ns | 1.8× | 8,424 B | 0 B |
+| 10,000 | 23,021 ns | 14,853 ns | 1.5× | 131,400 B | 2 B |
+
+### Enqueue/dequeue N items
+
+| N | BCL (`Queue<int>`) | `PooledQueue<int>` | BCL Alloc | ZA Alloc |
+|------:|-------------------:|-------------------:|----------:|---------:|
+| 100 | 439 ns | 744 ns | 1,192 B | 0 B |
+| 1,000 | 3,172 ns | 8,967 ns | 8,432 B | 0 B |
+| 10,000 | 37,196 ns | 126,427 ns | 131,408 B | 16 B |
+
+> `PooledQueue` is slower than BCL `Queue` for large N due to the grow-and-unwrap operation required to maintain circular-buffer invariants in a pooled array. The allocation saving is 100% for N ≤ 1,000. Use `RingBuffer<T>` instead of `PooledQueue<T>` when capacity is known in advance — it has no grow overhead.
+
+### Add + lookup N entries
+
+| N | BCL (`Dictionary<string,int>`) | `SpanDictionary<string,int>` | Speedup | BCL Alloc | ZA Alloc |
+|------:|-------------------------------:|-----------------------------:|--------:|----------:|---------:|
+| 100 | 1,270 ns | 719 ns | 1.8× | 7.4 KB | 0 B |
+| 1,000 | 11,821 ns | 6,368 ns | 1.9× | 71.5 KB | 0 B |
+
+> `SpanDictionary` allocates **0 bytes** because its entry array is rented from `ArrayPool<T>` and returned on `Dispose`. The open-addressing layout (no `Node` objects, no bucket chains) also eliminates the per-entry allocation overhead found in `Dictionary`.
+
+The key metric is the **ZA Alloc** column. ZeroAlloc collections target 0 B allocated on all paths except initial pool rent and `ToArray()`.
 
 ## When Zero Allocation Matters
 

@@ -129,15 +129,15 @@ public sealed class ZeroAllocListGenerator : IIncrementalGenerator
         sb.AppendLine($"{indent2}}}");
         sb.AppendLine();
 
-        // Indexer
-        sb.AppendLine($"{indent2}/// <summary>Gets the element at the specified index.</summary>");
-        sb.AppendLine($"{indent2}public {readonlyMod}{T} this[int index]");
+        // Indexer — returns ref T to match PooledList<T> semantics
+        sb.AppendLine($"{indent2}/// <summary>Gets a reference to the element at the specified index.</summary>");
+        sb.AppendLine($"{indent2}public {readonlyMod}ref {T} this[int index]");
         sb.AppendLine($"{indent2}{{");
         sb.AppendLine($"{indent3}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         sb.AppendLine($"{indent3}get");
         sb.AppendLine($"{indent3}{{");
         sb.AppendLine($"{indent4}if ((uint)index >= (uint)_count) throw new ArgumentOutOfRangeException(nameof(index));");
-        sb.AppendLine($"{indent4}return _array![index];");
+        sb.AppendLine($"{indent4}return ref _array![index];");
         sb.AppendLine($"{indent3}}}");
         sb.AppendLine($"{indent2}}}");
         sb.AppendLine();

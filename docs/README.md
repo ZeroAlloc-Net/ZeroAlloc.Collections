@@ -51,7 +51,7 @@ ring.TryRead(out var b);
 
 // SpanDictionary — open-addressing hash map
 using var dict = new SpanDictionary<string, int>(capacity: 16);
-dict.TryAdd("key", 1);
+dict.Add("key", 1);
 dict.TryGetValue("key", out var value);
 
 // PooledStack — LIFO
@@ -65,7 +65,8 @@ queue.Enqueue("first");
 queue.TryDequeue(out var front);
 
 // FixedSizeList — stack-allocated, fixed capacity
-using var fixedList = new FixedSizeList<long>(capacity: 8);
+Span<long> buffer = stackalloc long[8];
+var fixedList = new FixedSizeList<long>(buffer);
 fixedList.Add(100L);
 
 // Heap variant — usable in async code and as class fields
@@ -74,6 +75,6 @@ heapList.Add(1);
 await ProcessAsync(heapList);
 
 // Source generator — emit a type-specific collection
-[ZeroAllocList<int>]
+[ZeroAllocList(typeof(int))]
 public partial struct IntList;
 ```
