@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.3...v0.1.4) (2026-04-01)
+
+
+### Bug Fixes
+
+* set slug: / on getting-started for root URL ([d121494](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/d121494dd0056ef2297720ce914aeca55c49b17d))
+
 ## [0.1.3](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.2...v0.1.3) (2026-03-31)
 
 
