@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.4...v0.1.5) (2026-04-01)
+
+
+### Bug Fixes
+
+* show package icon on NuGet.org ([14f3608](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/14f3608c11a79e247c6fbef17b7e93c02c3d7321))
+* show package icon on NuGet.org ([e49920b](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/e49920b43c289b0842f526ae73ccb8ce3cc41931))
+
 ## [0.1.4](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.3...v0.1.4) (2026-04-01)
 
 
