@@ -1,7 +1,7 @@
 ---
 id: getting-started
 title: Getting Started
-slug: /getting-started
+slug: /
 description: Install ZeroAlloc.Collections and use your first collection in under five minutes.
 sidebar_position: 1
 ---
