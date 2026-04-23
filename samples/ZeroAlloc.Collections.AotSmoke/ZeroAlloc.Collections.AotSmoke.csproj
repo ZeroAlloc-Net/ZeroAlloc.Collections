@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- net9.0 is the highest runtime TFM the main lib ships (ns2.1;net8.0;net9.0).
+         Native AOT is fully supported on net9.0, so net10.0 would gain nothing here
+         and force a project-wide TFM bump. -->
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <OptimizationPreference>Size</OptimizationPreference>
+
+    <!-- Per-call codes promoted to errors. Assembly-level IL2104/IL3053 stay
+         warnings (third-party roll-ups we can't fix from here). -->
+    <WarningsAsErrors>$(WarningsAsErrors);IL2026;IL2067;IL2075;IL2091;IL3050;IL3051</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ZeroAlloc.Collections\ZeroAlloc.Collections.csproj"
+                      SetTargetFramework="TargetFramework=net9.0" />
+    <ProjectReference Include="..\..\src\ZeroAlloc.Collections.Generators\ZeroAlloc.Collections.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false"
+                      UndefineProperties="PublishAot" />
+  </ItemGroup>
+</Project>
