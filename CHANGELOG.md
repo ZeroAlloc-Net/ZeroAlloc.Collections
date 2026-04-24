@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.5...v0.1.6) (2026-04-24)
+
+
+### Features
+
+* **collections:** ConcurrentHeapSpanDictionary - thread-safe pooled hash map ([#13](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/13)) ([5e928fc](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/5e928fcfbcb646cebb384343b8a7c7ce3c8f5cb8))
+
 ## [0.1.5](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.4...v0.1.5) (2026-04-01)
 
 
