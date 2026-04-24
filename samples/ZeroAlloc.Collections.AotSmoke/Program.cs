@@ -31,6 +31,16 @@ if (!ring.TryPeek(out var p) || p != 2) return Fail($"HeapRingBuffer.TryPeek exp
     if (pooled[4] != 40) return Fail($"PooledList[4] expected 40, got {pooled[4]}");
 }
 
+// 4. ConcurrentHeapSpanDictionary<TKey, TValue>: TryAdd/TryGetValue/Dispose under AOT
+using (var cdict = new ConcurrentHeapSpanDictionary<int, string>(capacity: 4))
+{
+    if (!cdict.TryAdd(1, "one")) return Fail("ConcurrentHeapSpanDictionary.TryAdd refused a new key");
+    if (cdict.TryAdd(1, "ONE")) return Fail("ConcurrentHeapSpanDictionary.TryAdd should refuse a duplicate key");
+    if (!cdict.TryGetValue(1, out var cv) || cv != "one")
+        return Fail($"ConcurrentHeapSpanDictionary.TryGetValue expected \"one\", got \"{cv}\"");
+    if (cdict.Count != 1) return Fail($"ConcurrentHeapSpanDictionary.Count expected 1, got {cdict.Count}");
+}
+
 Console.WriteLine("AOT smoke: PASS");
 return 0;
 
