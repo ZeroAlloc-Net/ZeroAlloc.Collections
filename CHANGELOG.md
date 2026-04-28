@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.7...v1.0.0) (2026-04-28)
+
+
+### Miscellaneous
+
+* **release:** promote to 1.0.0 stability milestone ([a68dade](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/a68dade5286af00cb12f43bd815138e21eb8cac1))
+
 ## 1.0.0
 
 Stability milestone — public API of `ZeroAlloc.Collections` is now considered stable. No code changes from 0.1.6; this release marks the transition out of pre-1.0 SemVer.
