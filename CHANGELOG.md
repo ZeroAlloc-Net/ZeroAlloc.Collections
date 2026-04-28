@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.6...v0.1.7) (2026-04-28)
+
+
+### Documentation
+
+* add GitHub Sponsors badge to README ([3f964f9](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/3f964f9d8d99974f9749b8b7693f07726ea855bc))
+
 ## [0.1.6](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.5...v0.1.6) (2026-04-24)
 
 
