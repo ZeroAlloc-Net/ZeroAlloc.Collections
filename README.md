@@ -3,6 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/ZeroAlloc.Collections.svg)](https://www.nuget.org/packages/ZeroAlloc.Collections)
 [![Build](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/actions/workflows/ci.yml/badge.svg)](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![AOT](https://img.shields.io/badge/AOT--Compatible-passing-brightgreen)](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/MarcelRoozekrans?style=flat&logo=githubsponsors&color=ea4aaa&label=Sponsor)](https://github.com/sponsors/MarcelRoozekrans)
 
 ZeroAlloc.Collections is a high-performance, zero-allocation collections library for .NET. It provides six collection types — each available as a `ref struct` for stack-only scenarios and as a heap-allocated class for use in async code, fields, and DI containers. All collections rent their backing storage from `ArrayPool<T>.Shared`, return it on `Dispose()`, and expose `Span<T>` accessors for tight inner loops. Source generators are included for emitting specialized, type-specific collection implementations at compile time.
