@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.0.0...v1.0.1) (2026-04-29)
+
+
+### Documentation
+
+* **readme:** standardize 5-badge set ([907c46e](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/907c46e85eca1af20e9d4c8d3c56b7d10eebb677))
+* **readme:** standardize 5-badge set (NuGet/Build/License/AOT/Sponsors) ([60d6984](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/60d698449108355013b6d13fb9caa61bb54ec076))
+
 ## [1.0.0](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v0.1.7...v1.0.0) (2026-04-28)
 
 
