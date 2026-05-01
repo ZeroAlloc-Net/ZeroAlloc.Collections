@@ -7,6 +7,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Lock public API surface: undeclared additions (RS0016) and removals (RS0017) are build errors. -->
+    <WarningsAsErrors>$(WarningsAsErrors);RS0016;RS0017</WarningsAsErrors>
   </PropertyGroup>
 
   <!-- Public API surface tracking -->
