@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.0...v1.1.1) (2026-05-03)
+
+
+### Bug Fixes
+
+* **release-please:** drop pre-major flags (package is post-1.0) ([#23](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/23)) ([7c213aa](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/7c213aa8c58af824be49416142a0ce9b944120ba))
+
 ## [1.1.0](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.0.1...v1.1.0) (2026-05-01)
 
 
