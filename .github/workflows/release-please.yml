@@ -1,0 +1,67 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - name: Release Please
+        uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          # Manifest mode: read release-please-config.json + .release-please-manifest.json
+          # from the repo root. Single-package mode (release-type passed inline) ignores
+          # those files and tracks state via PR labels — which can get into a corrupted
+          # state producing wrong version PRs. Mirrors ZeroAlloc.Mediator (post-PR-#65).
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  publish:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Restore
+        run: dotnet restore ZeroAlloc.Collections.slnx
+
+      - name: Build
+        run: dotnet build ZeroAlloc.Collections.slnx --configuration Release --no-restore -p:Version=${{ needs.release-please.outputs.version }}
+
+      - name: Test
+        run: dotnet test ZeroAlloc.Collections.slnx --configuration Release --no-build --verbosity normal
+
+      - name: Pack
+        run: |
+          dotnet pack src/ZeroAlloc.Collections/ZeroAlloc.Collections.csproj -c Release --no-build -p:PackageVersion=${{ needs.release-please.outputs.version }} -o ./nupkg
+
+      - name: Push to NuGet
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Upload to GitHub Release
+        run: gh release upload ${{ needs.release-please.outputs.tag_name }} ./nupkg/*.nupkg
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
