@@ -80,16 +80,16 @@ A fixed-capacity circular buffer suitable for producer/consumer queues, telemetr
 
 | Page | Description |
 |------|-------------|
-| [Getting Started](docs/getting-started.md) | Install and use your first collection in five minutes |
-| [PooledList](docs/pooled-list.md) | Growable list backed by `ArrayPool<T>` |
-| [RingBuffer](docs/ring-buffer.md) | Fixed-capacity circular buffer |
-| [SpanDictionary](docs/span-dictionary.md) | Open-addressing hash map with `Span` accessors |
-| [PooledStack & PooledQueue](docs/stack-and-queue.md) | LIFO stack and FIFO queue with pooled storage |
-| [FixedSizeList](docs/fixed-size-list.md) | Stack-allocated fixed-capacity list |
-| [Source Generators](docs/source-generators.md) | Emit type-specific collections at compile time |
-| [Diagnostics](docs/diagnostics.md) | Analyzer warnings and error reference |
-| [Performance](docs/performance.md) | Benchmark results and zero-alloc design internals |
-| [Testing](docs/testing.md) | Unit-test collections with xUnit |
+| [Getting Started](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/getting-started.md) | Install and use your first collection in five minutes |
+| [PooledList](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/pooled-list.md) | Growable list backed by `ArrayPool<T>` |
+| [RingBuffer](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/ring-buffer.md) | Fixed-capacity circular buffer |
+| [SpanDictionary](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/span-dictionary.md) | Open-addressing hash map with `Span` accessors |
+| [PooledStack & PooledQueue](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/stack-and-queue.md) | LIFO stack and FIFO queue with pooled storage |
+| [FixedSizeList](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/fixed-size-list.md) | Stack-allocated fixed-capacity list |
+| [Source Generators](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/source-generators.md) | Emit type-specific collections at compile time |
+| [Diagnostics](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/diagnostics.md) | Analyzer warnings and error reference |
+| [Performance](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md) | Benchmark results and zero-alloc design internals |
+| [Testing](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/testing.md) | Unit-test collections with xUnit |
 
 ## License
 
