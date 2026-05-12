@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.1...v1.1.2) (2026-05-12)
+
+
+### Bug Fixes
+
+* **readme:** absolute GitHub URLs so nuget.org links resolve ([#29](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/29)) ([06e4375](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/06e4375c24e1e2b9f526a29d0ab43acc87025b66))
+
 ## [1.1.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.0...v1.1.1) (2026-05-03)
 
 
