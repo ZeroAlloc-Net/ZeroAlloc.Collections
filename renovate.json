@@ -1,8 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "schedule": ["before 6am on monday"],
-  "timezone": "Europe/Amsterdam",
+  "extends": ["config:recommended", "github>ZeroAlloc-Net/.github"],
   "labels": ["dependencies"],
   "packageRules": [
     {
