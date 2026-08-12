@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.2...v1.1.3) (2026-08-12)
+
+
+### Bug Fixes
+
+* turn warnings into errors, and correct what that surfaced ([#46](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/46)) ([cfe0838](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/cfe08385353db3a2927d9d2467ff0a194e89f054))
+
 ## [1.1.2](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.1...v1.1.2) (2026-05-12)
 
 
