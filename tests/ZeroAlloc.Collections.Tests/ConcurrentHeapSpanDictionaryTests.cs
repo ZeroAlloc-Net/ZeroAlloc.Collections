@@ -185,8 +185,8 @@ public class ConcurrentHeapSpanDictionaryTests
         dict.TryAdd(2, "two");
         var values = dict.ToValuesArray();
         Assert.Equal(2, values.Length);
-        Assert.Contains("one", values);
-        Assert.Contains("two", values);
+        Assert.Contains("one", values, StringComparer.Ordinal);
+        Assert.Contains("two", values, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -251,9 +251,9 @@ public class ConcurrentHeapSpanDictionaryTests
         Assert.True(dict.TryAdd(4, "four"));  // insert should reuse the Deleted slot
 
         // All remaining keys findable after the tombstone rewrite.
-        Assert.True(dict.TryGetValue(1, out var v1) && v1 == "one");
-        Assert.True(dict.TryGetValue(3, out var v3) && v3 == "three");
-        Assert.True(dict.TryGetValue(4, out var v4) && v4 == "four");
+        Assert.True(dict.TryGetValue(1, out var v1) && string.Equals(v1, "one", StringComparison.Ordinal));
+        Assert.True(dict.TryGetValue(3, out var v3) && string.Equals(v3, "three", StringComparison.Ordinal));
+        Assert.True(dict.TryGetValue(4, out var v4) && string.Equals(v4, "four", StringComparison.Ordinal));
         Assert.False(dict.ContainsKey(2));
         Assert.Equal(3, dict.Count);
     }

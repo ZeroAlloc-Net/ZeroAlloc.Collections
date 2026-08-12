@@ -18,7 +18,7 @@ public sealed class HeapRingBufferTests
         using var buf = new HeapRingBuffer<int>(4);
         Assert.True(buf.IsEmpty);
         Assert.False(buf.IsFull);
-        Assert.Equal(0, buf.Count);
+        Assert.Empty(buf);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public sealed class HeapRingBufferTests
         buf.Clear();
 
         Assert.True(buf.IsEmpty);
-        Assert.Equal(0, buf.Count);
+        Assert.Empty(buf);
         Assert.False(buf.TryRead(out _));
     }
 

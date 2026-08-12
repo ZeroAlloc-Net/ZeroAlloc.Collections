@@ -1,0 +1,10 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove($(MSBuildThisFile), $(MSBuildThisFileDirectory)..))" />
+  <PropertyGroup>
+    <!-- MA0048 wants one type per file named after it. GeneratorSmokeTests.cs declares the
+         four partial structs the generator runs against, and StackQueueBenchmarks.cs holds
+         the two benchmark classes it compares; both are single scenarios read as a unit.
+         Scoped here so src/ still gets the rule. -->
+    <NoWarn>$(NoWarn);MA0048</NoWarn>
+  </PropertyGroup>
+</Project>

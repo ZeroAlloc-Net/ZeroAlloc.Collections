@@ -64,7 +64,7 @@ public ref struct SpanDictionary<TKey, TValue>
         if (TryInsert(key, value, insertOnly: true))
             return;
 
-        throw new ArgumentException($"An item with the same key has already been added. Key: {key}");
+        throw new ArgumentException($"An item with the same key has already been added. Key: {key}", nameof(key));
     }
 
     /// <summary>
@@ -194,14 +194,23 @@ public ref struct SpanDictionary<TKey, TValue>
         return key is null ? 0 : key.GetHashCode() & 0x7FFFFFFF;
     }
 
-    /// <returns>true if inserted or updated; false if key existed and insertOnly was true.</returns>
-    private bool TryInsert(TKey key, TValue value, bool insertOnly)
+    /// <summary>
+    /// Grows the table when the next insert would put the load factor at or above 3/4.
+    /// Extracted from <see cref="TryInsert"/>, which was three lines over MA0051's limit; the
+    /// probe loop that remains there is the part worth reading as one piece.
+    /// </summary>
+    private void GrowIfLoadFactorExceeded()
     {
-        // Check load factor before insert
         if ((_count + 1) * 4 >= _entries!.Length * 3)
         {
             Grow();
         }
+    }
+
+    /// <returns>true if inserted or updated; false if key existed and insertOnly was true.</returns>
+    private bool TryInsert(TKey key, TValue value, bool insertOnly)
+    {
+        GrowIfLoadFactorExceeded();
 
         var entries = _entries;
         int hash = GetHash(key);

@@ -10,7 +10,7 @@ public class HeapPooledListTests
         using var list = new HeapPooledList<int>();
         IList<int> ilist = list;
         ilist.Add(1);
-        Assert.Equal(1, ilist.Count);
+        Assert.Single(ilist);
         Assert.Equal(1, ilist[0]);
     }
 
@@ -89,7 +89,7 @@ public class HeapPooledListTests
         list.Add(1);
         list.Add(2);
         list.Clear();
-        Assert.Equal(0, list.Count);
+        Assert.Empty(list);
     }
 
     [Fact]
