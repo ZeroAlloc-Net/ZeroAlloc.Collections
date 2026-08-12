@@ -36,7 +36,7 @@ using (var cdict = new ConcurrentHeapSpanDictionary<int, string>(capacity: 4))
 {
     if (!cdict.TryAdd(1, "one")) return Fail("ConcurrentHeapSpanDictionary.TryAdd refused a new key");
     if (cdict.TryAdd(1, "ONE")) return Fail("ConcurrentHeapSpanDictionary.TryAdd should refuse a duplicate key");
-    if (!cdict.TryGetValue(1, out var cv) || cv != "one")
+    if (!cdict.TryGetValue(1, out var cv) || !string.Equals(cv, "one", StringComparison.Ordinal))
         return Fail($"ConcurrentHeapSpanDictionary.TryGetValue expected \"one\", got \"{cv}\"");
     if (cdict.Count != 1) return Fail($"ConcurrentHeapSpanDictionary.Count expected 1, got {cdict.Count}");
 }

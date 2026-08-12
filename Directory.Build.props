@@ -17,7 +17,23 @@
     <PackageIcon>icon.png</PackageIcon>
     <Copyright>Copyright (c) Marcel Roozekrans</Copyright>
     <VersionPrefix>0.1.0</VersionPrefix>
-  </PropertyGroup>
+      <!-- Warnings are errors here as across the rest of the org; without it a build can
+         accumulate warnings indefinitely and nothing reports it. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- EPS06 reports "hidden copy of a non-readonly struct 'Span'" 72 times across this
+         library. The claim is factually wrong: System.Span&lt;T&gt; carries IsReadOnlyAttribute
+         (and IsByRefLikeAttribute) in every supported runtime, verified by reflecting over
+         System.Private.CoreLib. ErrorProne.NET.Structs 0.1.2 dates from 2019 and does not
+         recognise a readonly ref struct, so it treats every Span field access as a
+         defensive copy. There is nothing to fix at 72 call sites in a Span-based collections
+         library; the analyzer is mistaken about the type. EPS03 makes the same mistake in
+         the other direction, reporting a "non-readonly struct Int32/Double returned by readonly
+         reference", and System.Int32 and System.Double both carry IsReadOnlyAttribute
+         too, verified the same way.
+         MA0158 asks for System.Threading.Lock instead of a lock object. That type is .NET 9+
+         and this library still targets net8.0 and netstandard2.0, so it is not available. -->
+    <NoWarn>$(NoWarn);EPS03;EPS06;MA0158</NoWarn>
+</PropertyGroup>
   <ItemGroup Condition="'$(IsPackable)' != 'false'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)assets\icon.png" Pack="true" PackagePath="\" />

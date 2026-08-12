@@ -24,7 +24,7 @@ public sealed class UndisposedPooledCollectionAnalyzer : DiagnosticAnalyzer
         DiagnosticId,
         Title,
         MessageFormat,
-        category: "Usage",
+        category: "ZeroAlloc.Collections.Generators",
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
         description: Description);

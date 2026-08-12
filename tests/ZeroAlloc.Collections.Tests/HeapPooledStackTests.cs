@@ -9,7 +9,7 @@ public class HeapPooledStackTests
     {
         using var stack = new HeapPooledStack<int>();
         Assert.True(stack.IsEmpty);
-        Assert.Equal(0, stack.Count);
+        Assert.Empty(stack);
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class HeapPooledStackTests
         stack.Push(42);
         Assert.True(stack.TryPeek(out var v));
         Assert.Equal(42, v);
-        Assert.Equal(1, stack.Count);
+        Assert.Single(stack);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class HeapPooledStackTests
         stack.Push(1);
         stack.Push(2);
         stack.Clear();
-        Assert.Equal(0, stack.Count);
+        Assert.Empty(stack);
         Assert.True(stack.IsEmpty);
     }
 
@@ -151,6 +151,6 @@ public class HeapPooledStackTests
         stack.Push("world");
         Assert.True(stack.TryPop(out var v));
         Assert.Equal("world", v);
-        Assert.Equal(1, stack.Count);
+        Assert.Single(stack);
     }
 }

@@ -78,9 +78,9 @@ public class HeapFixedSizeListTests
     public void Count_ReflectsItems()
     {
         var list = new HeapFixedSizeList<int>(4);
-        Assert.Equal(0, list.Count);
+        Assert.Empty(list);
         list.Add(1);
-        Assert.Equal(1, list.Count);
+        Assert.Single(list);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class HeapFixedSizeListTests
         list.Add(1);
         list.Add(2);
         list.Clear();
-        Assert.Equal(0, list.Count);
+        Assert.Empty(list);
     }
 
     [Fact]
@@ -172,9 +172,9 @@ public class HeapFixedSizeListTests
         var list = new HeapFixedSizeList<int>(4);
         list.Add(10);
         list.Add(20);
-        Assert.True(list.Contains(10));
-        Assert.True(list.Contains(20));
-        Assert.False(list.Contains(30));
+        Assert.Contains(10, list);
+        Assert.Contains(20, list);
+        Assert.DoesNotContain(30, list);
     }
 
     [Fact]
@@ -258,7 +258,7 @@ public class HeapFixedSizeListTests
     {
         IReadOnlyList<int> list = new HeapFixedSizeList<int>(4);
         ((IList<int>)list).Add(1);
-        Assert.Equal(1, list.Count);
+        Assert.Single(list);
         Assert.Equal(1, list[0]);
     }
 }

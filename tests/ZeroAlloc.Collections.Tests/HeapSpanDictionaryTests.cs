@@ -47,7 +47,7 @@ public class HeapSpanDictionaryTests
         dict.Add(1, "one");
         Assert.True(dict.Remove(1));
         Assert.False(dict.ContainsKey(1));
-        Assert.Equal(0, dict.Count);
+        Assert.Empty(dict);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class HeapSpanDictionaryTests
         dict.Add(1, 10);
         dict.Add(2, 20);
         dict.Clear();
-        Assert.Equal(0, dict.Count);
+        Assert.Empty(dict);
         Assert.False(dict.ContainsKey(1));
     }
 
@@ -134,7 +134,7 @@ public class HeapSpanDictionaryTests
     {
         using var dict = new HeapSpanDictionary<int, int>();
         dict.Add(1, 10);
-        Assert.Equal(1, dict.Count);
+        Assert.Single(dict);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class HeapSpanDictionaryTests
         ICollection<KeyValuePair<int, string>> col = dict;
         Assert.False(col.Remove(new KeyValuePair<int, string>(1, "wrong")));
         Assert.True(col.Remove(new KeyValuePair<int, string>(1, "one")));
-        Assert.Equal(0, dict.Count);
+        Assert.Empty(dict);
     }
 
     [Fact]
@@ -219,8 +219,8 @@ public class HeapSpanDictionaryTests
 
         var values = dict.Values;
         Assert.Equal(2, values.Count);
-        Assert.Contains("one", values);
-        Assert.Contains("two", values);
+        Assert.Contains("one", values, StringComparer.Ordinal);
+        Assert.Contains("two", values, StringComparer.Ordinal);
     }
 
     // --- IReadOnlyDictionary interface ---
@@ -248,6 +248,13 @@ public class HeapSpanDictionaryTests
         var dict = new HeapSpanDictionary<int, string>(4);
         dict.Add(1, "one");
         dict.Dispose();
+
+        // Deliberately Count rather than Assert.Empty, which xUnit2013 would prefer:
+        // Assert.Empty enumerates, and enumerating a disposed pooled collection dereferences
+        // the buffer it has already returned to the pool. Reading Count is the only safe
+        // observation left, and it is exactly what this test is about.
+#pragma warning disable xUnit2013
         Assert.Equal(0, dict.Count);
+#pragma warning restore xUnit2013
     }
 }

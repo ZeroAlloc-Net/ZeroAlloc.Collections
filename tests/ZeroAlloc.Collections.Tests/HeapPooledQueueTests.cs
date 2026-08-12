@@ -10,7 +10,7 @@ public class HeapPooledQueueTests
     {
         using var queue = new HeapPooledQueue<int>();
         Assert.True(queue.IsEmpty);
-        Assert.Equal(0, queue.Count);
+        Assert.Empty(queue);
     }
 
     [Fact]
@@ -35,7 +35,7 @@ public class HeapPooledQueueTests
         queue.Enqueue(42);
         Assert.True(queue.TryPeek(out var v));
         Assert.Equal(42, v);
-        Assert.Equal(1, queue.Count);
+        Assert.Single(queue);
     }
 
     [Fact]
@@ -76,7 +76,7 @@ public class HeapPooledQueueTests
         queue.Enqueue(1);
         queue.Enqueue(2);
         queue.Clear();
-        Assert.Equal(0, queue.Count);
+        Assert.Empty(queue);
         Assert.True(queue.IsEmpty);
         // Can still enqueue after clear
         queue.Enqueue(99);
