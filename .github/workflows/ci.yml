@@ -36,6 +36,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
+          # 8.0.x and 9.0.x are the runtimes the multi-targeted tests execute on.
+          # global-json-file installs the SDK global.json actually pins: without it
+          # this job never installs a 10.x SDK at all and only builds because the
+          # runner image happens to ship one that satisfies the pin. The moment
+          # global.json moves ahead of the image, the job fails to find any SDK.
+          global-json-file: global.json
           dotnet-version: |
             8.0.x
             9.0.x
