@@ -338,13 +338,34 @@ public class ConcurrentHeapSpanDictionaryTests
         using var dict = new ConcurrentHeapSpanDictionary<int, int>(4);
         dict.TryAdd(1, 0);
 
+        int distinctValuesSeen = 0;
+
+        // The liveness half of this test used to depend on the scheduler: the writer could
+        // burn through all 5,000 iterations before the reader task was ever given a core, and
+        // then the reader -- finding the writer already complete -- observed nothing and the
+        // assertion below failed with every dictionary invariant still intact. Making the
+        // writer wait for the reader to acknowledge its first two values turns that from
+        // likely into guaranteed, without serialising the remaining 4,998 writes that
+        // constitute the actual contention.
+        const int AcknowledgedWrites = 2;
+
         var writer = Task.Run(() =>
         {
             for (int i = 1; i <= Iterations; i++)
+            {
                 dict.AddOrUpdate(1, -1, (_, _) => i);
+
+                if (i <= AcknowledgedWrites)
+                {
+                    // Bounded so a genuinely starved reader fails the assertion rather than
+                    // hanging the suite.
+                    long deadline = Environment.TickCount64 + 5_000;
+                    while (Volatile.Read(ref distinctValuesSeen) < i && Environment.TickCount64 < deadline)
+                        Thread.Yield();
+                }
+            }
         });
 
-        int distinctValuesSeen = 0;
         int lastSeen = 0;
         await Task.Run(() =>
         {
@@ -353,7 +374,7 @@ public class ConcurrentHeapSpanDictionaryTests
                 if (dict.TryGetValue(1, out var v))
                 {
                     Assert.True(v >= lastSeen, $"Value went backwards from {lastSeen} to {v}");
-                    if (v != lastSeen) distinctValuesSeen++;
+                    if (v != lastSeen) Interlocked.Increment(ref distinctValuesSeen);
                     lastSeen = v;
                 }
                 Thread.Yield(); // don't starve the writer on low-core CI
@@ -397,6 +418,8 @@ public class ConcurrentHeapSpanDictionaryTests
         while (Interlocked.Read(ref writerOps) < 100)
             Thread.Yield();
 
+        long opsBeforeSnapshots = Interlocked.Read(ref writerOps);
+
         for (int attempt = 0; attempt < 50; attempt++)
         {
             var snapshot = dict.ToArray();
@@ -407,9 +430,16 @@ public class ConcurrentHeapSpanDictionaryTests
                 Assert.Equal(kv.Key, kv.Value);
         }
 
+        // What this test needs is that writes actually overlapped the snapshots -- not that
+        // the runner was fast. Comparing the counter across the snapshot loop asserts exactly
+        // that overlap, where the previous absolute threshold of 1,000 total operations was
+        // really a throughput measurement and failed on a contended two-core runner while
+        // every snapshot invariant above still held.
+        long opsDuringSnapshots = Interlocked.Read(ref writerOps) - opsBeforeSnapshots;
+
         stop.Cancel();
         await writer.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.True(Interlocked.Read(ref writerOps) > 1_000,
-            "Writer didn't get enough CPU time to concurrently stress the snapshots");
+        Assert.True(opsDuringSnapshots > 0,
+            "Writer made no progress while snapshots were being taken, so nothing was actually contended");
     }
 }
