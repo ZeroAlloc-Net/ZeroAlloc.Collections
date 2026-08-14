@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.3...v1.1.4) (2026-08-14)
+
+
+### Tests
+
+* make the two concurrency guards independent of scheduler luck ([#50](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/50)) ([a0afa3a](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/a0afa3a7601e85fc198ef0337042824f483f8141))
+
 ## [1.1.3](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.2...v1.1.3) (2026-08-12)
 
 
