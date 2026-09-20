@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -398,9 +400,10 @@ public class ConcurrentHeapSpanDictionaryTests
         using var stop = new CancellationTokenSource();
         long writerOps = 0;
 
-        // Writer adds/removes a rising key while simultaneously updating the seeded
-        // keys' values to intentionally-mismatched values (so a torn read WOULD violate
-        // the "value == key" invariant if serialisation broke).
+        // The writer only ever adds (i, i) and removes it again, so every entry in the
+        // dictionary satisfies value == key at all times. That is what makes the
+        // invariant below meaningful: a mismatched pair could only come from a snapshot
+        // reading a half-written entry.
         var writer = Task.Run(() =>
         {
             int i = 20;
@@ -413,33 +416,56 @@ public class ConcurrentHeapSpanDictionaryTests
             }
         });
 
-        // Wait until the writer is actually running before taking snapshots — otherwise
-        // the main loop can finish its 50 iterations before the writer has even scheduled.
         while (Interlocked.Read(ref writerOps) < 100)
             Thread.Yield();
 
         long opsBeforeSnapshots = Interlocked.Read(ref writerOps);
+        var starvationTimer = Stopwatch.StartNew();
 
         for (int attempt = 0; attempt < 50; attempt++)
         {
-            var snapshot = dict.ToArray();
-            // Seed invariant: every entry the snapshot sees must satisfy value == key.
-            // The writer only writes (i, i) and then removes — so no snapshot should
-            // ever see a mismatched pair if the lock correctly serialises writes vs. ToArray.
-            foreach (var kv in snapshot)
+            foreach (var kv in dict.ToArray())
                 Assert.Equal(kv.Key, kv.Value);
+
+            WaitForWriterAdvance(() => Interlocked.Read(ref writerOps), starvationTimer);
         }
 
-        // What this test needs is that writes actually overlapped the snapshots -- not that
-        // the runner was fast. Comparing the counter across the snapshot loop asserts exactly
-        // that overlap, where the previous absolute threshold of 1,000 total operations was
-        // really a throughput measurement and failed on a contended two-core runner while
-        // every snapshot invariant above still held.
         long opsDuringSnapshots = Interlocked.Read(ref writerOps) - opsBeforeSnapshots;
 
         stop.Cancel();
         await writer.WaitAsync(TimeSpan.FromSeconds(5));
-        Assert.True(opsDuringSnapshots > 0,
-            "Writer made no progress while snapshots were being taken, so nothing was actually contended");
+
+        // Guaranteed by WaitForWriterAdvance rather than hoped for: one advance per
+        // snapshot. It can only fail if that wait stopped working.
+        Assert.True(opsDuringSnapshots >= 50,
+            $"Expected at least one writer advance per snapshot, saw {opsDuringSnapshots}");
+    }
+
+    /// <summary>
+    /// Blocks until the writer's counter moves, so snapshots and writes interleave by
+    /// construction.
+    /// </summary>
+    /// <remarks>
+    /// Taking snapshots and then asserting afterwards that the counter happened to move
+    /// is what made this test flaky. On a single core the main thread can complete all
+    /// fifty snapshots inside one scheduling quantum, so the writer never runs and the
+    /// assertion fails even though every invariant held. Pinned to one core, that failed
+    /// twelve times out of twelve.
+    ///
+    /// SpinOnce escalates from a busy spin to Thread.Sleep, so the writer gets scheduled
+    /// even when there is only one core to share. A starved or dead writer still fails,
+    /// but on a timeout long enough that only a real defect trips it.
+    /// </remarks>
+    private static void WaitForWriterAdvance(Func<long> readOps, Stopwatch starvationTimer)
+    {
+        long seen = readOps();
+        var spin = new SpinWait();
+        while (readOps() == seen)
+        {
+            Assert.True(
+                starvationTimer.Elapsed < TimeSpan.FromSeconds(30),
+                "Writer thread never advanced; it is starved or has died.");
+            spin.SpinOnce();
+        }
     }
 }
