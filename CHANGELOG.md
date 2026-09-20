@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.5...v1.1.6) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** pin the SDK floor at the .NET 10 GA band, not the newest patch ([#112](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/112)) ([bcaa3c3](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/bcaa3c3b4801956f75339986c6e0b66307062a54))
+
 ## [1.1.5](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.4...v1.1.5) (2026-09-19)
 
 
