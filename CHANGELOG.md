@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.7](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.6...v1.1.7) (2026-09-20)
+
+
+### Bug Fixes
+
+* pack every src package instead of a hardcoded list ([#115](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/115)) ([6fc9122](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/6fc91229e61e88a58dabe2d89c1731402aa5e205))
+
+
+### Tests
+
+* make ToArray snapshot contention deterministic ([#117](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/117)) ([84eec2a](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/84eec2a1ac896cfaa5595a16b590dccdf73e50f4))
+
 ## [1.1.6](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.5...v1.1.6) (2026-09-20)
 
 
