@@ -110,6 +110,3 @@ jobs:
 
   api-compat:
     uses: ZeroAlloc-Net/.github/.github/workflows/api-compat.yml@main
-    with:
-      package-id: ZeroAlloc.Collections
-      csproj-path: src/ZeroAlloc.Collections/ZeroAlloc.Collections.csproj
