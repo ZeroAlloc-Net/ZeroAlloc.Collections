@@ -12,7 +12,12 @@ ZeroAlloc.Collections includes a Roslyn analyzer that detects common mistakes at
 
 | Code | Severity | Category | Title |
 |------|----------|----------|-------|
-| ZAC001 | Warning | Usage | Pooled collection should be disposed |
+| ZAC001 | Warning | ZeroAlloc.Collections.Generators | Pooled collection should be disposed |
+| ZAC010 | Warning | ZeroAlloc.Collections.Generators | Ambiguous backing array field |
+| ZAC011 | Warning | ZeroAlloc.Collections.Generators | Ambiguous count field |
+| ZAC012 | Error | ZeroAlloc.Collections.Generators | Field not found |
+
+ZAC001 was in category `Usage` until 1.1.4. ZAC010 to ZAC012 come from the `[ZeroAllocEnumerable]` generator; see [Source Generators](source-generators.md).
 
 ## ZAC001 — Pooled Collection Should Be Disposed
 
@@ -131,3 +136,9 @@ Or in your `.csproj` for project-wide suppression:
     <NoWarn>$(NoWarn);ZAC001</NoWarn>
 </PropertyGroup>
 ```
+
+## Release Tracking
+
+`src/ZeroAlloc.Collections.Generators/AnalyzerReleases.Shipped.md` records the release each rule first shipped in, and any later change to its category or severity. A new rule goes into `AnalyzerReleases.Unshipped.md`. Changing a shipped rule's severity or category, or removing it, has to be declared there under `### Changed Rules` or `### Removed Rules`, or the build fails.
+
+The move from Unshipped to Shipped is automated. When release-please opens or updates the release PR, the `ship-release-tracking` job in `.github/workflows/release-please.yml` moves the rows, and the `PublicAPI.Unshipped.txt` entries, onto that branch. The `release-tracking` job in `ci.yml` fails a release PR while anything is still unshipped. Both use the shared [`ship-release-tracking.py`](https://github.com/ZeroAlloc-Net/.github/blob/main/scripts/ship-release-tracking.py); if a release PR lacks the move, run it with the release version from the root of the release branch and push the result.
