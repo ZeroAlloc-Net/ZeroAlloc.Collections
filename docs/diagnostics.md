@@ -17,7 +17,7 @@ ZeroAlloc.Collections includes a Roslyn analyzer that detects common mistakes at
 | ZAC011 | Warning | ZeroAlloc.Collections.Generators | Ambiguous count field |
 | ZAC012 | Error | ZeroAlloc.Collections.Generators | Field not found |
 
-ZAC001 was in category `Usage` until 1.1.4. ZAC010 to ZAC012 come from the `[ZeroAllocEnumerable]` generator; see [Source Generators](source-generators.md).
+ZAC001 was in category `Usage` until 1.1.4. ZAC010 to ZAC012 come from the `[ZeroAllocEnumerable]` generator; see [Source Generators](source-generators.md) and the sections below.
 
 ## ZAC001 — Pooled Collection Should Be Disposed
 
@@ -135,6 +135,108 @@ Or in your `.csproj` for project-wide suppression:
 <PropertyGroup>
     <NoWarn>$(NoWarn);ZAC001</NoWarn>
 </PropertyGroup>
+```
+
+## ZAC010 — Ambiguous Backing Array Field
+
+**What it means:** A type marked `[ZeroAllocEnumerable]` with no field names has more than one instance array field, so the generator can't tell which one holds the elements. It still generates an enumerator, over the **first array field declared**, which may not be the one you meant.
+
+**Severity:** Warning. **Message format:** `Type '{0}' has multiple array fields; specify arrayFieldName in [ZeroAllocEnumerable] to avoid ambiguity`
+
+Static fields don't count. A type with no instance array field at all gets no enumerator and no diagnostic.
+
+### Example That Triggers ZAC010
+
+```csharp
+[ZeroAllocEnumerable] // ZAC010: 'SensorReadings' has multiple array fields
+public partial struct SensorReadings
+{
+    private double[] _values;
+    private long[] _timestamps;
+    private int _count;
+}
+```
+
+### How to Fix
+
+Name the fields explicitly. The constructor takes both, the backing array first:
+
+```csharp
+[ZeroAllocEnumerable("_values", "_count")]
+public partial struct SensorReadings
+{
+    private double[] _values;
+    private long[] _timestamps;
+    private int _count;
+}
+```
+
+## ZAC011 — Ambiguous Count Field
+
+**What it means:** A type marked `[ZeroAllocEnumerable]` with no field names has more than one instance `int` field, so the generator can't tell which one is the element count. It still generates an enumerator, using the **first `int` field declared** as the count. If that's the wrong field, `foreach` reads the wrong number of elements.
+
+**Severity:** Warning. **Message format:** `Type '{0}' has multiple int fields; specify countFieldName in [ZeroAllocEnumerable] to avoid ambiguity`
+
+Static fields don't count. A type with no instance `int` field at all gets no enumerator and no diagnostic.
+
+### Example That Triggers ZAC011
+
+```csharp
+[ZeroAllocEnumerable] // ZAC011: 'SensorReadings' has multiple int fields
+public partial struct SensorReadings
+{
+    private double[] _values;
+    private int _capacity;
+    private int _count;
+}
+```
+
+Here the generator would take `_capacity` as the count.
+
+### How to Fix
+
+Name the fields explicitly:
+
+```csharp
+[ZeroAllocEnumerable("_values", "_count")]
+public partial struct SensorReadings
+{
+    private double[] _values;
+    private int _capacity;
+    private int _count;
+}
+```
+
+## ZAC012 — Field Not Found
+
+**What it means:** A field name given to `[ZeroAllocEnumerable(arrayFieldName, countFieldName)]` doesn't match a suitable field on the type. The array field must be a non-static array field, and the count field a non-static `int` field. A field with the right name but the wrong type, or a static one, doesn't match either. The generator emits **no enumerator** for the type, so `foreach` over it doesn't compile unless the type provides its own `GetEnumerator`.
+
+**Severity:** Error. **Message format:** `Type '{0}' does not have a field named '{1}'`
+
+The diagnostic is reported once for each name that doesn't match.
+
+### Example That Triggers ZAC012
+
+```csharp
+[ZeroAllocEnumerable("_items", "_count")] // ZAC012: 'SensorReadings' does not have a field named '_items'
+public partial struct SensorReadings
+{
+    private double[] _values;
+    private int _count;
+}
+```
+
+### How to Fix
+
+Correct the name, or give the field the expected type:
+
+```csharp
+[ZeroAllocEnumerable("_values", "_count")]
+public partial struct SensorReadings
+{
+    private double[] _values;
+    private int _count;
+}
 ```
 
 ## Release Tracking
