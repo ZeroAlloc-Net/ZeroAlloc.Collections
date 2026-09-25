@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.8](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.7...v1.1.8) (2026-09-25)
+
+
+### Bug Fixes
+
+* mark released analyzer rules and public api as shipped and automate the move ([#127](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/127)) ([1cb6082](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/1cb6082bb39ad3c27fec1cc24f17d370a4e44991))
+
 ## [1.1.7](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.6...v1.1.7) (2026-09-20)
 
 
