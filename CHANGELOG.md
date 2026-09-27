@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.9](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.8...v1.1.9) (2026-09-27)
+
+
+### Refactoring
+
+* replace ErrorProne.NET with the readonly-struct IDE rules ([#133](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/133)) ([adaaa82](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/adaaa825ccf1c82f050908fafa18727399b4ad92))
+
 ## [1.1.8](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.7...v1.1.8) (2026-09-25)
 
 
