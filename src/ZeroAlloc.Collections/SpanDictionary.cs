@@ -54,7 +54,7 @@ public ref struct SpanDictionary<TKey, TValue>
     /// <summary>
     /// Gets the number of key/value pairs in the dictionary.
     /// </summary>
-    public int Count => _count;
+    public readonly int Count => _count;
 
     /// <summary>
     /// Adds a key/value pair. Throws <see cref="ArgumentException"/> if the key already exists.
@@ -73,7 +73,7 @@ public ref struct SpanDictionary<TKey, TValue>
     public TValue this[TKey key]
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        get
+        readonly get
         {
             if (TryGetValue(key, out var value))
                 return value;
@@ -90,7 +90,7 @@ public ref struct SpanDictionary<TKey, TValue>
     /// Attempts to get the value associated with the specified key.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGetValue(TKey key, out TValue value)
+    public readonly bool TryGetValue(TKey key, out TValue value)
     {
         var entries = _entries;
         int hash = GetHash(key);
@@ -124,7 +124,7 @@ public ref struct SpanDictionary<TKey, TValue>
     /// Determines whether the dictionary contains the specified key.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool ContainsKey(TKey key) => TryGetValue(key, out _);
+    public readonly bool ContainsKey(TKey key) => TryGetValue(key, out _);
 
     /// <summary>
     /// Removes the value with the specified key, using tombstone deletion.
@@ -172,7 +172,7 @@ public ref struct SpanDictionary<TKey, TValue>
     /// Returns an enumerator that iterates through the occupied entries.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public Enumerator GetEnumerator() => new Enumerator(_entries!);
+    public readonly Enumerator GetEnumerator() => new Enumerator(_entries!);
 
     /// <summary>
     /// Returns the rented entry array to the pool.
@@ -321,7 +321,7 @@ public ref struct SpanDictionary<TKey, TValue>
         /// <summary>
         /// Gets the current key/value pair.
         /// </summary>
-        public KeyValuePair<TKey, TValue> Current
+        public readonly KeyValuePair<TKey, TValue> Current
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
