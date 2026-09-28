@@ -80,9 +80,8 @@ jobs:
     # Publishes samples/ZeroAlloc.Collections.AotSmoke with PublishAot=true and runs
     # the binary. Exercises the heap and ref struct collections, the dictionaries and a
     # generator-emitted list, with reference, primitive, enum, struct and nullable arguments.
-    # Net9.0 has full Native AOT support; the main lib multi-targets ns2.1;net8;net9
-    # so net9.0 is the highest TFM we can realistically pin the sample to without
-    # bumping the whole project to net10.0.
+    # The sample targets net10.0 so the publish uses the net10 ILCompiler, where NativeAOT
+    # codegen bugs such as dotnet/runtime#134799 live; it consumes the lib's net9.0 asset.
     steps:
       - uses: actions/checkout@v7
         with:
