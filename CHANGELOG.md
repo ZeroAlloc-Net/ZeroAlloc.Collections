@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.10](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.9...v1.1.10) (2026-09-28)
+
+
+### Tests
+
+* cover value types in the AOT smoke ([#137](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/137)) ([7eba8eb](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/7eba8eb68497de636ff75e387e748970aad5bdb0))
+* run the AOT smoke on the net10 ILCompiler ([#139](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/139)) ([336ba1b](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/336ba1b879eebeabd6b07bac4a445349d710a976))
+
 ## [1.1.9](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.8...v1.1.9) (2026-09-27)
 
 
