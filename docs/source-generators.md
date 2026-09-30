@@ -188,12 +188,30 @@ foreach (ref readonly var value in readings)
 }
 ```
 
+## Where the Target Can Be Declared
+
+All three generators reopen the attributed type itself, wherever it is declared:
+
+- **Global namespace or any namespace.**
+- **Generic types**, such as `partial struct IntList<TTag>`. The generated code is written with the type's type parameter names. Constraints are not repeated, which a partial declaration allows. For `[ZeroAllocEnumerable]`, the backing array may use one of the type's own type parameters, as in `private T[] _items;`.
+- **Nested types.** The generated code is placed inside a partial declaration of every containing type, outermost first, so **every containing type must be `partial`** too. When one is not, the generator reports [ZAC013](diagnostics.md) and generates nothing for that type.
+- **Records and ref structs.** A `record`, `record struct` or `ref struct` target is reopened with its own kind.
+- **Any accessibility.** The generated declaration repeats the declared accessibility, including `protected`, `protected internal` and `private protected` on nested types.
+
+```csharp
+public partial class Telemetry<TSource>
+{
+    [ZeroAllocList(typeof(double))]
+    private partial struct Samples;
+}
+```
+
 ## How the Generators Work
 
 All three generators use the Roslyn incremental generator pipeline (`IIncrementalGenerator`) for fast IDE responsiveness. The pipeline:
 
 1. **Filter** — `ForAttributeWithMetadataName` identifies types annotated with the relevant attribute. Only matching syntax nodes enter the pipeline.
-2. **Transform** — Extract the model (namespace, type name, element type, accessibility) from the semantic model.
+2. **Transform** — Extract the model (namespace, containing types, type name and type parameters, element type, accessibility) from the semantic model.
 3. **Emit** — `RegisterSourceOutput` generates the C# source text and adds it via `SourceProductionContext.AddSource`.
 
 Because the pipeline is incremental, the generator only re-runs when the annotated type or its attribute arguments change. Editing unrelated files does not trigger regeneration.
@@ -204,8 +222,10 @@ The generated code targets `netstandard2.1`, `net8.0`, and `net9.0`. On `net9.0`
 
 ### Generated File Naming
 
-Each generator produces a file named `{TypeName}.{GeneratorName}.g.cs`:
+Each generator produces a file named after the type's namespace, then its containing types and the type joined by `+`, each with its arity, then the generator's name:
 
-- `IntList.ZeroAllocList.g.cs`
-- `OrderBuffer.PooledCollection.g.cs`
-- `SensorReadings.ZeroAllocEnumerable.g.cs`
+- `MyApp.IntList.ZeroAllocList.g.cs`
+- ``MyApp.Telemetry`1+Samples.ZeroAllocList.g.cs``
+- `SensorReadings.ZeroAllocEnumerable.g.cs`, for a type in the global namespace
+
+Two types with the same simple name therefore never share a file name. The names are not a public contract and may change.
