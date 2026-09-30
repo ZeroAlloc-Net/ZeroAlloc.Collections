@@ -44,6 +44,7 @@ public sealed class ZeroAllocListGenerator : IIncrementalGenerator
         return new GeneratorModel(
             Namespace: ns,
             TypeName: typeSymbol.Name,
+            HintName: HintNames.ForType(typeSymbol, "ZeroAllocList"),
             ElementTypeFullName: elementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             ElementTypeShortName: elementType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat),
             IsStruct: typeSymbol.IsValueType,
@@ -280,13 +281,14 @@ public sealed class ZeroAllocListGenerator : IIncrementalGenerator
             sb.AppendLine("}");
         }
 
-        spc.AddSource($"{model.TypeName}.ZeroAllocList.g.cs",
+        spc.AddSource(model.HintName,
             SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
     private readonly record struct GeneratorModel(
         string? Namespace,
         string TypeName,
+        string HintName,
         string ElementTypeFullName,
         string ElementTypeShortName,
         bool IsStruct,

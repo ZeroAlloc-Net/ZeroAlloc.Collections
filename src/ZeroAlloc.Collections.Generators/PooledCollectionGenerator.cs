@@ -44,6 +44,7 @@ public sealed class PooledCollectionGenerator : IIncrementalGenerator
         return new GeneratorModel(
             Namespace: ns,
             TypeName: typeSymbol.Name,
+            HintName: HintNames.ForType(typeSymbol, "PooledCollection"),
             ElementTypeFullName: elementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
             IsStruct: typeSymbol.IsValueType,
             Accessibility: typeSymbol.DeclaredAccessibility);
@@ -238,13 +239,14 @@ public sealed class PooledCollectionGenerator : IIncrementalGenerator
             sb.AppendLine("}");
         }
 
-        spc.AddSource($"{model.TypeName}.PooledCollection.g.cs",
+        spc.AddSource(model.HintName,
             SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
     private readonly record struct GeneratorModel(
         string? Namespace,
         string TypeName,
+        string HintName,
         string ElementTypeFullName,
         bool IsStruct,
         Accessibility Accessibility);
