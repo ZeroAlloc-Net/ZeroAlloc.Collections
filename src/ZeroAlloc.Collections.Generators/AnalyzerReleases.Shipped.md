@@ -26,3 +26,11 @@ ZAC012  | ZeroAlloc.Collections.Generators | Error    | ZeroAllocEnumerableGener
 Rule ID | New Category                     | New Severity | Old Category | Old Severity | Notes
 --------|----------------------------------|--------------|--------------|--------------|------------------------------------
 ZAC001  | ZeroAlloc.Collections.Generators | Warning      | Usage        | Warning      | UndisposedPooledCollectionAnalyzer
+
+## Release 1.1.11
+
+### New Rules
+
+Rule ID | Category                         | Severity | Notes
+--------|----------------------------------|----------|----------------------------------------------------------
+ZAC013  | ZeroAlloc.Collections.Generators | Warning  | Nested type inside a containing type that is not partial
