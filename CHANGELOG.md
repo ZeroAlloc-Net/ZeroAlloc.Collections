@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.11](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.10...v1.1.11) (2026-09-30)
+
+
+### Bug Fixes
+
+* generate nested and generic types into the real type ([#144](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/144)) ([2185e13](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/2185e133562d9b22dc011dd0614b0ab446b13293)), closes [#141](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/141)
+* name generated files after the namespace and containing types ([#142](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/142)) ([2cb9fe9](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/2cb9fe90285a216f9c9e161fa88330e2277bd8d7)), closes [#140](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/140)
+
 ## [1.1.10](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.9...v1.1.10) (2026-09-28)
 
 
