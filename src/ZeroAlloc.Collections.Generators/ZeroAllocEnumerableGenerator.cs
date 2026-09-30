@@ -148,6 +148,7 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
             return new GeneratorModel(
                 Namespace: null,
                 TypeName: typeSymbol.Name,
+                HintName: HintNames.ForType(typeSymbol, "ZeroAllocEnumerable"),
                 ArrayFieldName: string.Empty,
                 CountFieldName: string.Empty,
                 ElementTypeFullName: string.Empty,
@@ -167,6 +168,7 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
         return new GeneratorModel(
             Namespace: ns,
             TypeName: typeSymbol.Name,
+            HintName: HintNames.ForType(typeSymbol, "ZeroAllocEnumerable"),
             ArrayFieldName: arrayField.Name,
             CountFieldName: countField!.Name,
             ElementTypeFullName: arrayElementType,
@@ -262,13 +264,14 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
             sb.AppendLine("}");
         }
 
-        spc.AddSource($"{model.TypeName}.ZeroAllocEnumerable.g.cs",
+        spc.AddSource(model.HintName,
             SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
     private readonly record struct GeneratorModel(
         string? Namespace,
         string TypeName,
+        string HintName,
         string ArrayFieldName,
         string CountFieldName,
         string ElementTypeFullName,
