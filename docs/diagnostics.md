@@ -16,8 +16,9 @@ ZeroAlloc.Collections includes a Roslyn analyzer that detects common mistakes at
 | ZAC010 | Warning | ZeroAlloc.Collections.Generators | Ambiguous backing array field |
 | ZAC011 | Warning | ZeroAlloc.Collections.Generators | Ambiguous count field |
 | ZAC012 | Error | ZeroAlloc.Collections.Generators | Field not found |
+| ZAC013 | Warning | ZeroAlloc.Collections.Generators | Nested type inside a containing type that is not partial |
 
-ZAC001 was in category `Usage` until 1.1.4. ZAC010 to ZAC012 come from the `[ZeroAllocEnumerable]` generator; see [Source Generators](source-generators.md).
+ZAC001 was in category `Usage` until 1.1.4. ZAC010 to ZAC012 come from the `[ZeroAllocEnumerable]` generator, and ZAC013 from all three generators; see [Source Generators](source-generators.md).
 
 ## ZAC001 — Pooled Collection Should Be Disposed
 
@@ -135,6 +136,36 @@ Or in your `.csproj` for project-wide suppression:
 <PropertyGroup>
     <NoWarn>$(NoWarn);ZAC001</NoWarn>
 </PropertyGroup>
+```
+
+## ZAC013 — Nested Type Inside a Containing Type That Is Not Partial
+
+**What it means:** A type marked `[ZeroAllocList]`, `[PooledCollection]` or `[ZeroAllocEnumerable]` is nested in another type that is not `partial`. The generated code is placed inside a partial declaration of every containing type, which only a `partial` type allows, so the generator generates nothing for it. None of the generated members exist, and code that uses them fails to compile. The warning names the outermost containing type that is not `partial`.
+
+Earlier versions generated such a type as a new type at the top of the namespace, which left the nested type just as empty.
+
+**Message format:** `'{0}' is not generated because its containing type '{1}' is not partial`
+
+### Example That Triggers ZAC013
+
+```csharp
+public class Telemetry
+{
+    [ZeroAllocList(typeof(double))]
+    public partial struct Samples; // ZAC013: 'Telemetry' is not partial
+}
+```
+
+### How to Fix
+
+Make every containing type `partial`, or move the type to the top of a namespace:
+
+```csharp
+public partial class Telemetry
+{
+    [ZeroAllocList(typeof(double))]
+    public partial struct Samples;
+}
 ```
 
 ## Release Tracking

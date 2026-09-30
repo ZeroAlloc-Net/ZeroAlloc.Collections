@@ -1,5 +1,3 @@
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Xunit;
 using ZeroAlloc.Collections.Generators;
 
@@ -12,111 +10,50 @@ namespace ZeroAlloc.Collections.Tests.Generators;
 /// </summary>
 public class HintNameTests
 {
-    private static string List(string name) =>
-        $"[ZeroAllocList(typeof(int))] public partial struct {name};";
-
-    private static string Pooled(string name) =>
-        $"[PooledCollection(typeof(int))] public partial struct {name};";
-
-    private static string Enumerable(string name) =>
-        $"[ZeroAllocEnumerable] public partial class {name} {{ private int[] _items = []; private int _count = 0; }}";
-
-    public static TheoryData<string, string> Generators() => new()
-    {
-        { nameof(List), ".ZeroAllocList.g.cs" },
-        { nameof(Pooled), ".PooledCollection.g.cs" },
-        { nameof(Enumerable), ".ZeroAllocEnumerable.g.cs" },
-    };
-
-    private static string Declare(string generator, string name) => generator switch
-    {
-        nameof(List) => List(name),
-        nameof(Pooled) => Pooled(name),
-        _ => Enumerable(name),
-    };
-
-    private static (string[] HintNames, Diagnostic[] Diagnostics) Run(string source)
-    {
-        var runtimeDir = Path.GetDirectoryName(typeof(object).Assembly.Location)!;
-        var references = new[]
-        {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-            MetadataReference.CreateFromFile(Path.Combine(runtimeDir, "System.Runtime.dll")),
-            MetadataReference.CreateFromFile(Path.Combine(runtimeDir, "System.Collections.dll")),
-            MetadataReference.CreateFromFile(typeof(System.Buffers.ArrayPool<>).Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(ZeroAllocListAttribute).Assembly.Location),
-        };
-        var compilation = CSharpCompilation.Create(
-            "HintNameTests",
-            [CSharpSyntaxTree.ParseText("using ZeroAlloc.Collections;\n" + source)],
-            references,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true));
-
-        CSharpGeneratorDriver.Create(
-                new ZeroAllocListGenerator().AsSourceGenerator(),
-                new PooledCollectionGenerator().AsSourceGenerator(),
-                new ZeroAllocEnumerableGenerator().AsSourceGenerator())
-            .RunGeneratorsAndUpdateCompilation(compilation, out var output, out var generatorDiagnostics);
-
-        var hintNames = output.SyntaxTrees
-            .Skip(1)
-            .Select(t => Path.GetFileName(t.FilePath))
-            .Order(StringComparer.Ordinal)
-            .ToArray();
-        var diagnostics = generatorDiagnostics
-            .Concat(output.GetDiagnostics())
-            .Where(d => d.Severity >= DiagnosticSeverity.Warning)
-            .ToArray();
-        return (hintNames, diagnostics);
-    }
-
     [Theory]
-    [MemberData(nameof(Generators))]
+    [MemberData(nameof(GeneratorRunner.Generators), MemberType = typeof(GeneratorRunner))]
     public void SameNamedTypes_InDifferentNamespaces_AreBothGenerated(string generator, string suffix)
     {
-        var (hintNames, diagnostics) = Run($$"""
-            namespace App.Orders { {{Declare(generator, "Items")}} }
-            namespace App.Customers { {{Declare(generator, "Items")}} }
+        var (hintNames, _, diagnostics) = GeneratorRunner.Run($$"""
+            namespace App.Orders { {{GeneratorRunner.Declare(generator, "Items")}} }
+            namespace App.Customers { {{GeneratorRunner.Declare(generator, "Items")}} }
             """);
 
         Assert.Empty(diagnostics);
         Assert.Equal(["App.Customers.Items" + suffix, "App.Orders.Items" + suffix], hintNames);
     }
 
-    // The generators emit a nested or generic type at namespace level without its containing
-    // types or type parameters, so its members land on a different type (#141). These tests
-    // pin only the hint names: each type gets its own file and none is dropped.
     [Theory]
-    [MemberData(nameof(Generators))]
-    public void SameNamedTypes_InDifferentContainingTypes_GetUniqueHintNames(string generator, string suffix)
+    [MemberData(nameof(GeneratorRunner.Generators), MemberType = typeof(GeneratorRunner))]
+    public void SameNamedTypes_InDifferentContainingTypes_AreBothGenerated(string generator, string suffix)
     {
-        var (hintNames, diagnostics) = Run($$"""
+        var (hintNames, _, diagnostics) = GeneratorRunner.Run($$"""
             namespace App
             {
-                public partial class Orders { {{Declare(generator, "Items")}} }
-                public partial class Customers { {{Declare(generator, "Items")}} }
+                public partial class Orders { {{GeneratorRunner.Declare(generator, "Items")}} }
+                public partial class Customers { {{GeneratorRunner.Declare(generator, "Items")}} }
             }
             """);
 
-        Assert.DoesNotContain(diagnostics, d => string.Equals(d.Id, "CS8785", StringComparison.Ordinal));
+        Assert.Empty(diagnostics);
         Assert.Equal(["App.Customers+Items" + suffix, "App.Orders+Items" + suffix], hintNames);
     }
 
     [Theory]
-    [MemberData(nameof(Generators))]
-    public void SameNamedTypes_OfDifferentArity_GetUniqueHintNames(string generator, string suffix)
+    [MemberData(nameof(GeneratorRunner.Generators), MemberType = typeof(GeneratorRunner))]
+    public void SameNamedTypes_OfDifferentArity_AreAllGenerated(string generator, string suffix)
     {
-        var (hintNames, diagnostics) = Run($$"""
+        var (hintNames, _, diagnostics) = GeneratorRunner.Run($$"""
             namespace App
             {
-                {{Declare(generator, "Items")}}
-                {{Declare(generator, "Items<T>")}}
-                public partial class Outer { {{Declare(generator, "Items")}} }
-                public partial class Outer<T> { {{Declare(generator, "Items")}} }
+                {{GeneratorRunner.Declare(generator, "Items")}}
+                {{GeneratorRunner.Declare(generator, "Items<T>")}}
+                public partial class Outer { {{GeneratorRunner.Declare(generator, "Items")}} }
+                public partial class Outer<T> { {{GeneratorRunner.Declare(generator, "Items")}} }
             }
             """);
 
-        Assert.DoesNotContain(diagnostics, d => string.Equals(d.Id, "CS8785", StringComparison.Ordinal));
+        Assert.Empty(diagnostics);
         Assert.Equal(
             [
                 "App.Items" + suffix,
@@ -128,10 +65,10 @@ public class HintNameTests
     }
 
     [Theory]
-    [MemberData(nameof(Generators))]
+    [MemberData(nameof(GeneratorRunner.Generators), MemberType = typeof(GeneratorRunner))]
     public void TypeInGlobalNamespace_IsNamedWithoutANamespacePrefix(string generator, string suffix)
     {
-        var (hintNames, diagnostics) = Run(Declare(generator, "Items"));
+        var (hintNames, _, diagnostics) = GeneratorRunner.Run(GeneratorRunner.Declare(generator, "Items"));
 
         Assert.Empty(diagnostics);
         Assert.Equal(["Items" + suffix], hintNames);

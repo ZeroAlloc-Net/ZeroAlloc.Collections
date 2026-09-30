@@ -37,30 +37,17 @@ public sealed class PooledCollectionGenerator : IIncrementalGenerator
         if (elementType is null)
             return null;
 
-        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
-            ? null
-            : typeSymbol.ContainingNamespace.ToDisplayString();
-
         return new GeneratorModel(
-            Namespace: ns,
-            TypeName: typeSymbol.Name,
+            Declaration: TargetDeclaration.From(typeSymbol, ctx.TargetNode),
             HintName: HintNames.ForType(typeSymbol, "PooledCollection"),
             ElementTypeFullName: elementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            IsStruct: typeSymbol.IsValueType,
-            Accessibility: typeSymbol.DeclaredAccessibility);
+            IsStruct: typeSymbol.IsValueType);
     }
 
     private static void Execute(SourceProductionContext spc, GeneratorModel model)
     {
-        var accessibility = model.Accessibility switch
-        {
-            Accessibility.Public => "public",
-            Accessibility.Internal => "internal",
-            Accessibility.Private => "private",
-            _ => "internal"
-        };
+        if (!model.Declaration.CanGenerate(spc)) return;
 
-        var typeKind = model.IsStruct ? "struct" : "class";
         var readonlyMod = model.IsStruct ? "readonly " : "";
         var T = model.ElementTypeFullName;
 
@@ -73,18 +60,12 @@ public sealed class PooledCollectionGenerator : IIncrementalGenerator
         sb.AppendLine("using System.Runtime.CompilerServices;");
         sb.AppendLine();
 
-        if (model.Namespace is not null)
-        {
-            sb.AppendLine($"namespace {model.Namespace}");
-            sb.AppendLine("{");
-        }
-
-        var indent = model.Namespace is not null ? "    " : "";
+        var indent = model.Declaration.Open(sb);
         var indent2 = indent + "    ";
         var indent3 = indent2 + "    ";
         var indent4 = indent3 + "    ";
 
-        sb.AppendLine($"{indent}{accessibility} partial {typeKind} {model.TypeName} : System.IDisposable");
+        sb.AppendLine($"{indent}{model.Declaration.Header} : System.IDisposable");
         sb.AppendLine($"{indent}{{");
 
         // Fields
@@ -97,7 +78,7 @@ public sealed class PooledCollectionGenerator : IIncrementalGenerator
 
         // Default constructor
         sb.AppendLine($"{indent2}/// <summary>Creates a new empty pooled collection using the shared pool.</summary>");
-        sb.AppendLine($"{indent2}public {model.TypeName}()");
+        sb.AppendLine($"{indent2}public {model.Declaration.Name}()");
         sb.AppendLine($"{indent2}{{");
         sb.AppendLine($"{indent3}_items = null;");
         sb.AppendLine($"{indent3}_pool = ArrayPool<{T}>.Shared;");
@@ -107,12 +88,12 @@ public sealed class PooledCollectionGenerator : IIncrementalGenerator
 
         // Capacity constructor
         sb.AppendLine($"{indent2}/// <summary>Creates a new pooled collection with the specified initial capacity.</summary>");
-        sb.AppendLine($"{indent2}public {model.TypeName}(int capacity) : this(capacity, ArrayPool<{T}>.Shared) {{ }}");
+        sb.AppendLine($"{indent2}public {model.Declaration.Name}(int capacity) : this(capacity, ArrayPool<{T}>.Shared) {{ }}");
         sb.AppendLine();
 
         // Capacity + pool constructor
         sb.AppendLine($"{indent2}/// <summary>Creates a new pooled collection with the specified initial capacity and pool.</summary>");
-        sb.AppendLine($"{indent2}public {model.TypeName}(int capacity, ArrayPool<{T}> pool)");
+        sb.AppendLine($"{indent2}public {model.Declaration.Name}(int capacity, ArrayPool<{T}> pool)");
         sb.AppendLine($"{indent2}{{");
         sb.AppendLine($"{indent3}_pool = pool ?? throw new ArgumentNullException(nameof(pool));");
         sb.AppendLine($"{indent3}_items = capacity > 0 ? pool.Rent(capacity) : null;");
@@ -234,20 +215,15 @@ public sealed class PooledCollectionGenerator : IIncrementalGenerator
 
         sb.AppendLine($"{indent}}}");
 
-        if (model.Namespace is not null)
-        {
-            sb.AppendLine("}");
-        }
+        model.Declaration.Close(sb);
 
         spc.AddSource(model.HintName,
             SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
     private readonly record struct GeneratorModel(
-        string? Namespace,
-        string TypeName,
+        TargetDeclaration Declaration,
         string HintName,
         string ElementTypeFullName,
-        bool IsStruct,
-        Accessibility Accessibility);
+        bool IsStruct);
 }

@@ -146,49 +146,34 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
         if (hasErrors)
         {
             return new GeneratorModel(
-                Namespace: null,
-                TypeName: typeSymbol.Name,
+                Declaration: TargetDeclaration.From(typeSymbol, ctx.TargetNode),
                 HintName: HintNames.ForType(typeSymbol, "ZeroAllocEnumerable"),
                 ArrayFieldName: string.Empty,
                 CountFieldName: string.Empty,
                 ElementTypeFullName: string.Empty,
                 IsStruct: false,
-                Accessibility: typeSymbol.DeclaredAccessibility,
-                Diagnostics: diagnosticsBuilder.ToImmutable(),
+                Diagnostics: new EquatableArray<Diagnostic>(diagnosticsBuilder.ToImmutable()),
                 HasErrors: true);
         }
 
         var arrayElementType = ((IArrayTypeSymbol)arrayField!.Type)
             .ElementType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
 
-        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
-            ? null
-            : typeSymbol.ContainingNamespace.ToDisplayString();
-
         return new GeneratorModel(
-            Namespace: ns,
-            TypeName: typeSymbol.Name,
+            Declaration: TargetDeclaration.From(typeSymbol, ctx.TargetNode),
             HintName: HintNames.ForType(typeSymbol, "ZeroAllocEnumerable"),
             ArrayFieldName: arrayField.Name,
             CountFieldName: countField!.Name,
             ElementTypeFullName: arrayElementType,
             IsStruct: typeSymbol.IsValueType,
-            Accessibility: typeSymbol.DeclaredAccessibility,
-            Diagnostics: diagnosticsBuilder.ToImmutable(),
+            Diagnostics: new EquatableArray<Diagnostic>(diagnosticsBuilder.ToImmutable()),
             HasErrors: false);
     }
 
     private static void Execute(SourceProductionContext spc, GeneratorModel model)
     {
-        var accessibility = model.Accessibility switch
-        {
-            Accessibility.Public => "public",
-            Accessibility.Internal => "internal",
-            Accessibility.Private => "private",
-            _ => "internal"
-        };
+        if (!model.Declaration.CanGenerate(spc)) return;
 
-        var typeKind = model.IsStruct ? "struct" : "class";
         var readonlyMod = model.IsStruct ? "readonly " : "";
         var T = model.ElementTypeFullName;
 
@@ -200,18 +185,12 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
         sb.AppendLine("using System.Runtime.CompilerServices;");
         sb.AppendLine();
 
-        if (model.Namespace is not null)
-        {
-            sb.AppendLine($"namespace {model.Namespace}");
-            sb.AppendLine("{");
-        }
-
-        var indent = model.Namespace is not null ? "    " : "";
+        var indent = model.Declaration.Open(sb);
         var indent2 = indent + "    ";
         var indent3 = indent2 + "    ";
         var indent4 = indent3 + "    ";
 
-        sb.AppendLine($"{indent}{accessibility} partial {typeKind} {model.TypeName}");
+        sb.AppendLine($"{indent}{model.Declaration.Header}");
         sb.AppendLine($"{indent}{{");
 
         // GetEnumerator
@@ -259,24 +238,21 @@ public sealed class ZeroAllocEnumerableGenerator : IIncrementalGenerator
 
         sb.AppendLine($"{indent}}}");
 
-        if (model.Namespace is not null)
-        {
-            sb.AppendLine("}");
-        }
+        model.Declaration.Close(sb);
 
         spc.AddSource(model.HintName,
             SourceText.From(sb.ToString(), Encoding.UTF8));
     }
 
     private readonly record struct GeneratorModel(
-        string? Namespace,
-        string TypeName,
+        TargetDeclaration Declaration,
         string HintName,
         string ArrayFieldName,
         string CountFieldName,
         string ElementTypeFullName,
         bool IsStruct,
-        Accessibility Accessibility,
-        ImmutableArray<Diagnostic> Diagnostics,  // ImmutableArray has structural equality — safe for incremental caching
+        // Compared element by element: ImmutableArray itself compares by reference, which made
+        // every run look like a change whenever a diagnostic was present.
+        EquatableArray<Diagnostic> Diagnostics,
         bool HasErrors);
 }
