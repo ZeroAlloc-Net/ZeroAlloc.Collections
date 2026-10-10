@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.11...v1.2.0) (2026-10-10)
+
+
+### Features
+
+* mark ZeroAlloc.Collections as AOT-compatible ([#149](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/149)) ([3375a60](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/3375a60f66ed8051d3308bcb357ae9374a788385))
+
 ## [1.1.11](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.10...v1.1.11) (2026-09-30)
 
 
