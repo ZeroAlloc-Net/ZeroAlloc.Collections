@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.0...v1.2.1) (2026-10-11)
+
+
+### Performance
+
+* cache HeapSpanDictionary key and value views, pool the concurrent snapshot ([#153](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/153)) ([d00fac4](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/d00fac4e9c69e0615c260dd477b4cc4b3309f377)), closes [#151](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/151)
+
 ## [1.2.0](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.1.11...v1.2.0) (2026-10-10)
 
 
