@@ -223,6 +223,104 @@ public class HeapSpanDictionaryTests
         Assert.Contains("two", values, StringComparer.Ordinal);
     }
 
+    [Fact]
+    public void Keys_And_Values_AreCachedLiveViews()
+    {
+        using var dict = new HeapSpanDictionary<int, string>(4);
+        var keys = dict.Keys;
+        var values = dict.Values;
+        Assert.Same(keys, dict.Keys);
+        Assert.Same(values, dict.Values);
+
+        dict.Add(1, "one");
+        dict.Add(2, "two");
+        Assert.Equal(2, keys.Count);
+        Assert.Equal(new[] { 1, 2 }, keys.Order());
+        Assert.Equal(new[] { "one", "two" }, values.Order(StringComparer.Ordinal), StringComparer.Ordinal);
+
+        dict.Remove(1);
+        Assert.Equal(new[] { 2 }, keys);
+        Assert.False(keys.Contains(1));
+    }
+
+    [Fact]
+    public void Keys_And_Values_AreReadOnly()
+    {
+        using var dict = new HeapSpanDictionary<int, string>(4);
+        dict.Add(1, "one");
+
+        Assert.True(dict.Keys.IsReadOnly);
+        Assert.True(dict.Values.IsReadOnly);
+        Assert.Throws<NotSupportedException>(() => dict.Keys.Add(2));
+        Assert.Throws<NotSupportedException>(() => dict.Keys.Remove(1));
+        Assert.Throws<NotSupportedException>(() => dict.Values.Clear());
+        Assert.Single(dict);
+    }
+
+    [Fact]
+    public void Keys_CopyTo_CopiesEveryKey()
+    {
+        using var dict = new HeapSpanDictionary<int, int>(4);
+        for (int i = 0; i < 5; i++) dict.Add(i, i * 10);
+
+        var keys = new int[6];
+        dict.Keys.CopyTo(keys, 1);
+        Assert.Equal(new[] { 0, 1, 2, 3, 4 }, keys.Skip(1).Order());
+
+        var values = new int[5];
+        dict.Values.CopyTo(values, 0);
+        Assert.Equal(new[] { 0, 10, 20, 30, 40 }, values.Order());
+        Assert.True(dict.Values.Contains(30));
+        Assert.False(dict.Values.Contains(35));
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => dict.Keys.CopyTo(new int[5], 1));
+        Assert.Throws<ArgumentNullException>(() => dict.Keys.CopyTo(null!, 0));
+    }
+
+    [Fact]
+    public void Keys_Enumeration_ThrowsWhenAKeyIsAdded()
+    {
+        using var dict = new HeapSpanDictionary<int, int>(16);
+        dict.Add(1, 1);
+        dict.Add(2, 2);
+
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            foreach (var key in dict.Keys) dict.Add(key + 100, 0);
+        });
+    }
+
+    [Fact]
+    public void Values_Enumeration_ThrowsWhenCleared()
+    {
+        using var dict = new HeapSpanDictionary<int, int>(16);
+        dict.Add(1, 1);
+        dict.Add(2, 2);
+
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            foreach (var _ in dict.Values) dict.Clear();
+        });
+    }
+
+    [Fact]
+    public void Keys_Enumeration_AllowsRemoveAndOverwrite()
+    {
+        // ArrayPool rents 16 slots for a capacity of 16. Eleven keys sit right at the 75% load
+        // factor, so an overwrite that grew the table would invalidate the enumeration.
+        using var dict = new HeapSpanDictionary<int, int>(16);
+        for (int i = 0; i < 11; i++) dict.Add(i, i);
+
+        foreach (var key in dict.Keys)
+        {
+            dict[key] = -key;
+            if (key % 2 == 0) dict.Remove(key);
+        }
+
+        Assert.All(dict, kv => Assert.Equal(-kv.Key, kv.Value));
+        Assert.All(dict.Keys, k => Assert.Equal(1, k % 2));
+    }
+
     // --- IReadOnlyDictionary interface ---
 
     [Fact]

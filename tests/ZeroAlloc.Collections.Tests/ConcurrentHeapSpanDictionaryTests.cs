@@ -214,6 +214,52 @@ public class ConcurrentHeapSpanDictionaryTests
     }
 
     [Fact]
+    public void GetEnumerator_IsASnapshot()
+    {
+        using var dict = new ConcurrentHeapSpanDictionary<int, int>(4);
+        for (int i = 0; i < 20; i++) dict.TryAdd(i, i);
+
+        var seen = new List<int>();
+        foreach (var kv in dict)
+        {
+            seen.Add(kv.Key);
+            dict.TryAdd(kv.Key + 1000, 0);
+            dict.TryRemove(kv.Key, out _);
+        }
+
+        Assert.Equal(Enumerable.Range(0, 20), seen.Order());
+    }
+
+    [Fact]
+    public void GetEnumerator_Empty_And_Reset()
+    {
+        using var dict = new ConcurrentHeapSpanDictionary<int, int>(4);
+        using (var empty = dict.GetEnumerator())
+            Assert.False(empty.MoveNext());
+
+        dict.TryAdd(1, 10);
+        dict.TryAdd(2, 20);
+        using var e = dict.GetEnumerator();
+        int first = 0;
+        while (e.MoveNext()) first += e.Current.Value;
+        Assert.False(e.MoveNext());
+        e.Reset();
+        int second = 0;
+        while (e.MoveNext()) second += e.Current.Value;
+        Assert.Equal(30, first);
+        Assert.Equal(30, second);
+    }
+
+    [Fact]
+    public void GetEnumerator_AfterDispose_IsEmpty()
+    {
+        var dict = new ConcurrentHeapSpanDictionary<int, int>(4);
+        dict.TryAdd(1, 10);
+        dict.Dispose();
+        Assert.Empty(dict);
+    }
+
+    [Fact]
     public void Dispose_CanBeCalledTwice()
     {
         var dict = new ConcurrentHeapSpanDictionary<int, string>(4);

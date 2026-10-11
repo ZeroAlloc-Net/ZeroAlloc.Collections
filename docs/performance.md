@@ -48,7 +48,7 @@ using var list = new PooledList<int>();
 
 ### 3. Zero-Allocation Enumerators
 
-Every collection's `GetEnumerator()` returns a `ref struct` enumerator. Because `ref struct` types cannot be boxed, `foreach` over a ZeroAlloc collection never allocates. The enumerator lives on the stack for the duration of the loop.
+Every `ref struct` collection's `GetEnumerator()` returns a `ref struct` enumerator. Because `ref struct` types cannot be boxed, `foreach` over a `ref struct` collection never allocates. The enumerator lives on the stack for the duration of the loop.
 
 ```csharp
 using var list = new PooledList<int>();
@@ -63,6 +63,17 @@ foreach (ref readonly var item in list)
 ```
 
 The `ref readonly` return also means no defensive copy for large value types.
+
+The `Heap*` classes are different. Their `GetEnumerator()` returns `IEnumerator<T>`, so every `foreach` allocates one enumerator object. Struct enumerators need a public return-type change and are planned for the next major in [#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152). Measured per `foreach` with N = 100, x64:
+
+| Collection | Allocated per `foreach` |
+|---|---:|
+| `HeapPooledList<T>`, `HeapPooledQueue<T>`, `HeapPooledStack<T>`, `HeapFixedSizeList<T>` | 40 B |
+| `HeapRingBuffer<T>` | 56 B |
+| `HeapSpanDictionary<TKey, TValue>`, and its `Keys` or `Values` | 40 B |
+| `ConcurrentHeapSpanDictionary<TKey, TValue>` | 32 B; the snapshot lives in a pooled buffer |
+
+Reading `HeapSpanDictionary.Keys` or `.Values`, and calling `Count` or `Contains` on them, allocates nothing: the views are created once and cached. To iterate a `Heap*` list without allocating, use `AsSpan()` where the type has it.
 
 ### 4. Open-Addressing Hash Map
 
@@ -117,7 +128,25 @@ Benchmarks are run with BenchmarkDotNet on .NET 9.0, Windows 11, x64 RyuJIT AVX2
 
 > `SpanDictionary` allocates **0 bytes** because its entry array is rented from `ArrayPool<T>` and returned on `Dispose`. The open-addressing layout (no `Node` objects, no bucket chains) also eliminates the per-entry allocation overhead found in `Dictionary`.
 
-The key metric is the **ZA Alloc** column. ZeroAlloc collections target 0 B allocated on all paths except initial pool rent and `ToArray()`.
+### Write/read N items, capacity known up front
+
+| N | BCL (`Queue<int>`) | `RingBuffer<int>` | `HeapRingBuffer<int>` | BCL Alloc | ZA Alloc |
+|------:|-------------------:|------------------:|----------------------:|----------:|---------:|
+| 100 | 664 ns | 1,440 ns | 1,497 ns | 464 B | 0 B |
+| 1,000 | 6,224 ns | 14,944 ns | 15,249 ns | 4,064 B | 0 B |
+
+> `RingBuffer` trades speed for allocation here: a pre-sized `Queue<int>` is about 2.2-2.4x faster in this single-threaded write-then-read loop, but allocates its array on every run.
+
+### Add + enumerate N items, fixed capacity
+
+| N | BCL (`List<int>`, pre-sized) | `FixedSizeList<int>` (stackalloc) | `HeapFixedSizeList<int>` | BCL Alloc | `FixedSizeList` Alloc | `HeapFixedSizeList` Alloc |
+|------:|------:|------:|------:|------:|------:|------:|
+| 100 | 405 ns | 310 ns | 537 ns | 456 B | 0 B | 496 B |
+| 1,000 | 2,166 ns | 1,466 ns | 4,134 ns | 4,056 B | 0 B | 4,096 B |
+
+> `HeapFixedSizeList` allocates a plain `T[]`, not a pooled buffer, plus one enumerator per `foreach`.
+
+The key metric is the **ZA Alloc** column. The `ref struct` collections target 0 B allocated on all paths except initial pool rent and `ToArray()`. The `Heap*` collections additionally allocate the collection object itself and one enumerator per `foreach`, as listed in [Zero-Allocation Enumerators](#3-zero-allocation-enumerators).
 
 ## When Zero Allocation Matters
 
@@ -142,7 +171,7 @@ If your profiler or allocation tracker does not show collection operations as a 
 
 1. **Pre-size your collections** — pass a `capacity` parameter to the constructor. This avoids grow operations entirely when you know the approximate size.
 
-2. **Use `ref struct` variants on hot paths** — they enforce stack-only lifetime and produce zero-alloc enumerators. Reserve `Heap*` variants for async code and long-lived storage.
+2. **Use `ref struct` variants on hot paths** — they enforce stack-only lifetime and produce zero-alloc enumerators. Reserve `Heap*` variants for async code and long-lived storage; their `foreach` allocates 32-56 B until [#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152).
 
 3. **Use `AsSpan()` instead of enumeration for bulk processing** — span-based iteration is faster than enumerator-based iteration because there is no `MoveNext()` / `Current` overhead.
 

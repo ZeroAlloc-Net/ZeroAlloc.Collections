@@ -76,6 +76,8 @@ Why: the value proposition is pooled bucket allocation, not beating `ConcurrentD
 
 `GetEnumerator()` / `foreach` iterates a **snapshot** taken under the lock. Iteration itself does not hold the lock and is safe under concurrent writes — but items added after you started iterating will not appear.
 
+The snapshot is copied into a buffer rented from `ArrayPool<T>.Shared` and returned when the enumerator is disposed, which `foreach` always does. A `foreach` therefore allocates only the enumerator object, 32 B on x64 regardless of the entry count. An enumerator you drive by hand must be disposed, or its buffer is not returned to the pool. `ToArray()`, `ToKeysArray()` and `ToValuesArray()` still allocate a new array of the current size, by design.
+
 ## Disposal
 
 `Dispose()` returns the bucket array to `ArrayPool.Shared`. Required for the zero-alloc claim to hold across instances.
