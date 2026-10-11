@@ -256,11 +256,24 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
     /// <summary>
     /// Returns an enumerator over a snapshot of the current entries. The snapshot is taken under
     /// the lock; iteration does not hold the lock and is safe during concurrent writes.
+    /// The snapshot is copied into a buffer rented from <see cref="ArrayPool{T}.Shared"/> and
+    /// returned when the enumerator is disposed, so a <c>foreach</c> allocates only the
+    /// enumerator object.
     /// </summary>
     public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
     {
-        var snapshot = ToArray();
-        foreach (var kv in snapshot) yield return kv;
+        lock (_syncRoot)
+        {
+            if (_entries is null || _count == 0) return new SnapshotEnumerator(null, 0);
+            var buffer = ArrayPool<KeyValuePair<TKey, TValue>>.Shared.Rent(_count);
+            int i = 0;
+            for (int j = 0; j < _entries.Length; j++)
+            {
+                if (_entries[j].State == EntryState.Occupied)
+                    buffer[i++] = new KeyValuePair<TKey, TValue>(_entries[j].Key, _entries[j].Value);
+            }
+            return new SnapshotEnumerator(buffer, i);
+        }
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -449,5 +462,48 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
 
         _entries = newEntries;
         _pool.Return(oldEntries, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Entry>());
+    }
+
+    private sealed class SnapshotEnumerator : IEnumerator<KeyValuePair<TKey, TValue>>
+    {
+        private KeyValuePair<TKey, TValue>[]? _buffer;
+        private readonly int _count;
+        private int _index;
+
+        public SnapshotEnumerator(KeyValuePair<TKey, TValue>[]? buffer, int count)
+        {
+            _buffer = buffer;
+            _count = count;
+            _index = -1;
+        }
+
+        public KeyValuePair<TKey, TValue> Current =>
+            _buffer is not null && (uint)_index < (uint)_count ? _buffer[_index] : default;
+
+        object IEnumerator.Current => Current;
+
+        public bool MoveNext()
+        {
+            if (_buffer is null) return false;
+            if (_index + 1 < _count)
+            {
+                _index++;
+                return true;
+            }
+            _index = _count;
+            return false;
+        }
+
+        public void Reset() => _index = -1;
+
+        public void Dispose()
+        {
+            var buffer = _buffer;
+            if (buffer is null) return;
+            _buffer = null;
+            ArrayPool<KeyValuePair<TKey, TValue>>.Shared.Return(
+                buffer,
+                clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<KeyValuePair<TKey, TValue>>());
+        }
     }
 }

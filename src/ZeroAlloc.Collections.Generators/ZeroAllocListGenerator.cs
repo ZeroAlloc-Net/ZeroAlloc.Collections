@@ -118,10 +118,15 @@ public sealed class ZeroAllocListGenerator : IIncrementalGenerator
         sb.AppendLine($"{indent3}[MethodImpl(MethodImplOptions.AggressiveInlining)]");
         sb.AppendLine($"{indent3}get");
         sb.AppendLine($"{indent3}{{");
-        sb.AppendLine($"{indent4}if ((uint)index >= (uint)_count) throw new ArgumentOutOfRangeException(nameof(index));");
+        sb.AppendLine($"{indent4}if ((uint)index >= (uint)_count) ThrowIndexOutOfRange();");
         sb.AppendLine($"{indent4}return ref _array![index];");
         sb.AppendLine($"{indent3}}}");
         sb.AppendLine($"{indent2}}}");
+        sb.AppendLine();
+
+        // Throw helper: keeps the throw out of the AggressiveInlining indexer above.
+        sb.AppendLine($"{indent2}[MethodImpl(MethodImplOptions.NoInlining)]");
+        sb.AppendLine($"{indent2}private static void ThrowIndexOutOfRange() => throw new ArgumentOutOfRangeException(\"index\");");
         sb.AppendLine();
 
         // Add

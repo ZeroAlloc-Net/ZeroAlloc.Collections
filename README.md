@@ -56,7 +56,7 @@ A fixed-capacity circular buffer suitable for producer/consumer queues, telemetr
 
 ## Features
 
-- **Zero Allocation** — all pooled collections rent from `ArrayPool<T>.Shared` and return buffers on disposal
+- **Zero Allocation on ref struct paths** — all pooled collections rent from `ArrayPool<T>.Shared` and return buffers on disposal; the `ref struct` variants add, look up and enumerate with 0 B allocated. The `Heap*` variants allocate one enumerator object per `foreach`, 32-56 B, until struct enumerators land in the next major ([#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152))
 - **Ref Struct Variants** — stack-only types with compile-time lifetime enforcement and `ref T` indexers
 - **Heap Variants** — class-based counterparts that implement `IDisposable`, `IList<T>`, and `IReadOnlyList<T>` for use in async methods and DI
 - **Span Accessors** — `AsSpan()` and `AsReadOnlySpan()` on every collection for zero-copy interop
