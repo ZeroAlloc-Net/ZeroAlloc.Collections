@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.2](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.1...v1.2.2) (2026-10-15)
+
+
+### Documentation
+
+* match the README claims to the collection types ([#160](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/160)) ([874f5d2](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/874f5d2240203b0d8875d329bc371620a959b60a))
+
+
+### Tests
+
+* measure allocation tests with AllocationGate ([#162](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/162)) ([cc1e1cd](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/cc1e1cdfa54e12113bba49c570d71bc3f3f23239)), closes [#159](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/159)
+
 ## [1.2.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.0...v1.2.1) (2026-10-11)
 
 
