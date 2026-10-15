@@ -218,7 +218,7 @@ Because the pipeline is incremental, the generator only re-runs when the annotat
 
 ### TFM Awareness
 
-The generated code targets `netstandard2.1`, `net8.0`, and `net9.0`. On `net9.0`, the generators can emit `allows ref struct` generic constraints where applicable. On lower targets, these constraints are omitted so the code compiles without errors.
+The generated code compiles on every target the library supports: `netstandard2.1`, `net8.0`, and `net9.0`. The generators emit the same source on every target; they do not add `allows ref struct` constraints.
 
 ### Generated File Naming
 
