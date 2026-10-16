@@ -6,7 +6,19 @@
 [![AOT](https://img.shields.io/badge/AOT--Compatible-passing-brightgreen)](https://learn.microsoft.com/dotnet/core/deploying/native-aot/)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/MarcelRoozekrans?style=flat&logo=githubsponsors&color=ea4aaa&label=Sponsor)](https://github.com/sponsors/MarcelRoozekrans)
 
-ZeroAlloc.Collections is a high-performance, zero-allocation collections library for .NET. It provides six collection types — each available as a `ref struct` for stack-only scenarios and as a heap-allocated class for use in async code, fields, and DI containers. The pooled collections rent their backing storage from `ArrayPool<T>.Shared` and return it on `Dispose()`; `FixedSizeList<T>` uses a buffer you supply, such as `stackalloc`, and `HeapFixedSizeList<T>` a plain array. The list types expose `Span<T>` accessors for tight inner loops. Source generators are included for emitting specialized, type-specific collection implementations at compile time.
+Pooled and stack-only counterparts to `List<T>`, `Dictionary<TKey,TValue>`, `Stack<T>` and `Queue<T>`
+whose `ref struct` forms add, look up and enumerate with 0 B allocated, NativeAOT-ready.
+
+## Why ZeroAlloc.Collections
+
+- **0 B on the hot path, asserted in CI.** The `ref struct` collections add, look up and enumerate with
+  0 B allocated per call; `AllocationTests` fails CI if any of them allocates.
+- **About 2× faster than the BCL for lists, stacks and dictionaries.** Adding 1,000 items to a `PooledList<int>`
+  takes 0.51× the time of `List<int>`, which allocates 8,424 B in the same run.
+- **Works under NativeAOT and trimming.** No reflection and no runtime code generation; every PR
+  publishes and runs an AOT sample.
+- **Compile-time diagnostics instead of runtime surprises.** `ZAC001` warns when a pooled collection is
+  never disposed, so a buffer that would never return to the pool is a build warning.
 
 ## Install
 
@@ -14,58 +26,29 @@ ZeroAlloc.Collections is a high-performance, zero-allocation collections library
 dotnet add package ZeroAlloc.Collections
 ```
 
-## Example
-
-### PooledList
+## Quick start
 
 ```csharp
 using ZeroAlloc.Collections;
 
-using var list = new PooledList<int>(capacity: 64);
+string[] order = ["apple", "pear", "apple", "kiwi"];
 
-list.Add(1);
-list.Add(2);
-list.Add(3);
+// Rents its entries from ArrayPool<T>.Shared and returns them on Dispose.
+using var prices = new SpanDictionary<string, decimal>(capacity: 16);
+prices.Add("apple", 0.50m);
+prices.Add("pear", 0.75m);
 
-foreach (var item in list)
-{
-    Console.WriteLine(item);
-}
+// Lives on the stack: no heap allocation at all.
+var basket = new FixedSizeList<decimal>(stackalloc decimal[8]);
+foreach (var item in order)
+    if (prices.TryGetValue(item, out var price)) basket.Add(price);
+
+decimal total = 0;
+foreach (var p in basket) total += p;
+Console.WriteLine($"{basket.Count} items, {total}"); // 3 items, 1.75
 ```
 
-The list rents from `ArrayPool<T>.Shared` on construction and returns the buffer when `Dispose()` runs — zero heap allocation for the backing array.
-
-### RingBuffer
-
-```csharp
-using ZeroAlloc.Collections;
-
-using var ring = new RingBuffer<string>(capacity: 4);
-
-ring.TryWrite("alpha");
-ring.TryWrite("beta");
-ring.TryWrite("gamma");
-
-while (ring.TryRead(out var item))
-{
-    Console.WriteLine(item); // alpha, beta, gamma
-}
-```
-
-A fixed-capacity circular buffer suitable for producer/consumer queues, telemetry windows, and bounded logging.
-
-## Features
-
-- **Zero Allocation on ref struct paths** — the pooled collections rent from `ArrayPool<T>.Shared` and return buffers on disposal; the `ref struct` variants add, look up and enumerate with 0 B allocated. The `Heap*` variants allocate one enumerator object per `foreach`, 32-56 B, until struct enumerators land in the next major ([#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152))
-- **Ref Struct Variants** — stack-only types with compile-time lifetime enforcement and `ref T` indexers
-- **Heap Variants** — class-based counterparts for use in async methods, fields and DI. `HeapPooledList<T>` and `HeapFixedSizeList<T>` implement `IList<T>` and `IReadOnlyList<T>`; `HeapPooledStack<T>`, `HeapPooledQueue<T>` and `HeapRingBuffer<T>` implement `IReadOnlyCollection<T>`; `HeapSpanDictionary<TKey,TValue>` implements `IDictionary<TKey,TValue>` and `IReadOnlyDictionary<TKey,TValue>`. Every pooled heap variant implements `IDisposable`; `HeapFixedSizeList<T>` owns a plain array and needs no disposal
-- **Span Accessors** — `AsSpan()` and `AsReadOnlySpan()` on `PooledList<T>`, `FixedSizeList<T>` and `HeapPooledList<T>`, and `AsSpan()` on `PooledStack<T>`, for zero-copy interop
-- **Source Generators** — emit type-specific collections, pooled wrappers, and `ref struct` enumerators at compile time
-- **Analyzer Diagnostics** — ZAC001 warns when a pooled collection is not disposed; ZAC010–ZAC013 flag source-generator misconfiguration such as ambiguous or missing fields
-- **Multi-TFM** — targets `netstandard2.1`, `net8.0`, and `net9.0`
-- **Native AOT Compatible** — no reflection, no dynamic code generation
-
-## Collections
+## What you get
 
 | Type | Ref Struct | Heap Variant | Description |
 |------|-----------|--------------|-------------|
@@ -77,22 +60,36 @@ A fixed-capacity circular buffer suitable for producer/consumer queues, telemetr
 | `FixedSizeList<T>` | Yes | `HeapFixedSizeList<T>` | Stack-allocated fixed-capacity list |
 | `ConcurrentHeapSpanDictionary<TKey,TValue>` | No | — | Thread-safe, coarse-locked, pooled hash map |
 
-## Documentation
+- **Two forms of each:** a `ref struct` for synchronous hot paths, and a `Heap*` class for fields,
+  `async` code and APIs that take `IList<T>`, `IReadOnlyCollection<T>` or `IDictionary<TKey,TValue>`.
+- **`Span<T>` access** to the list and stack contents for zero-copy loops.
+- **Source generators** that emit type-specific collections from `[ZeroAllocList(typeof(T))]`.
+  See [source generators](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/source-generators.md).
+- Targets `netstandard2.1`, `net8.0` and `net9.0`.
 
-| Page | Description |
-|------|-------------|
-| [Getting Started](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/getting-started.md) | Install and use your first collection in five minutes |
-| [PooledList](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/pooled-list.md) | Growable list backed by `ArrayPool<T>` |
-| [RingBuffer](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/ring-buffer.md) | Fixed-capacity circular buffer |
-| [SpanDictionary](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/span-dictionary.md) | Open-addressing hash map with `Span` accessors |
-| [PooledStack & PooledQueue](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/stack-and-queue.md) | LIFO stack and FIFO queue with pooled storage |
-| [FixedSizeList](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/fixed-size-list.md) | Stack-allocated fixed-capacity list |
-| [ConcurrentHeapSpanDictionary](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/concurrent-heap-span-dictionary.md) | Thread-safe pooled dictionary, a drop-in for `ConcurrentDictionary` |
-| [Source Generators](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/source-generators.md) | Emit type-specific collections at compile time |
-| [Diagnostics](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/diagnostics.md) | Analyzer warnings and error reference |
-| [Performance](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md) | Benchmark results and zero-alloc design internals |
-| [Testing](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/testing.md) | Unit-test collections with xUnit |
+## Performance
+
+BenchmarkDotNet, N = 1,000. Time is the same-run ratio against the BCL type; allocations are exact.
+
+| Workload | BCL type | ZeroAlloc time | BCL alloc | ZeroAlloc alloc |
+|---|---|---:|---:|---:|
+| Add N items | `List<int>` | 0.51× | 8,424 B | 0 B |
+| Push and pop N items | `Stack<int>` | 0.55× | 8,424 B | 0 B |
+| Write and read N items, capacity known | `Queue<int>` | 2.40× | 4,064 B | 0 B |
+
+`RingBuffer<T>` and `PooledQueue<T>` trade speed for allocation, and the `Heap*` classes allocate one
+enumerator per `foreach`. Every workload, with the full numbers: [docs/performance.md](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md).
+
+## Learn more
+
+- Documentation: [collections.zeroalloc.net](https://collections.zeroalloc.net), including
+  [getting started](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/getting-started.md), the [cookbook](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/tree/main/docs/cookbook) and
+  [diagnostics](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/diagnostics.md).
+- Related packages: [ZeroAlloc.Inject](https://github.com/ZeroAlloc-Net/ZeroAlloc.Inject) and
+  [ZeroAlloc.Analyzers](https://github.com/ZeroAlloc-Net/ZeroAlloc.Analyzers).
+- Contributing: issues and pull requests are welcome on [GitHub](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues).
+- [CHANGELOG](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/CHANGELOG.md).
 
 ## License
 
-MIT
+MIT. See [LICENSE](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/LICENSE).
