@@ -58,7 +58,7 @@ public ref struct RingBuffer<T>
     {
         if (_count == _capacity) return false;
         _array![_tail] = item;
-        _tail = (_tail + 1) % _capacity;
+        if (++_tail == _capacity) _tail = 0;
         _count++;
         return true;
     }
@@ -75,7 +75,7 @@ public ref struct RingBuffer<T>
         item = _array![_head];
         if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
             _array[_head] = default!;
-        _head = (_head + 1) % _capacity;
+        if (++_head == _capacity) _head = 0;
         _count--;
         return true;
     }
@@ -148,7 +148,12 @@ public ref struct RingBuffer<T>
         public readonly T Current
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _array[(_head + _index) % _capacity];
+            get
+            {
+                // _head < _capacity and _index < _count <= _capacity, so one subtraction wraps it.
+                int i = _head + _index;
+                return _array[i < _capacity ? i : i - _capacity];
+            }
         }
     }
 

@@ -62,7 +62,7 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
             Grow();
 
         _array![_tail] = item;
-        _tail = (_tail + 1) % _array.Length;
+        if (++_tail == _array.Length) _tail = 0;
         _count++;
     }
 
@@ -78,7 +78,7 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
         item = _array![_head];
         if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
             _array[_head] = default!;
-        _head = (_head + 1) % _array.Length;
+        if (++_head == _array.Length) _head = 0;
         _count--;
         return true;
     }
@@ -143,8 +143,11 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
     /// <summary>Returns an enumerator that iterates through the queue in FIFO order.</summary>
     public IEnumerator<T> GetEnumerator()
     {
-        for (int i = 0; i < _count; i++)
-            yield return _array![(_head + i) % _array.Length];
+        for (int i = 0, index = _head; i < _count; i++)
+        {
+            yield return _array![index];
+            if (++index == _array.Length) index = 0;
+        }
     }
 
     /// <inheritdoc/>

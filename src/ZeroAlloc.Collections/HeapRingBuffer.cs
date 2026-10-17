@@ -59,7 +59,7 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
     {
         if (_count == _capacity) return false;
         _array![_tail] = item;
-        _tail = (_tail + 1) % _capacity;
+        if (++_tail == _capacity) _tail = 0;
         _count++;
         return true;
     }
@@ -76,7 +76,7 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
         item = _array![_head];
         if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
             _array[_head] = default!;
-        _head = (_head + 1) % _capacity;
+        if (++_head == _capacity) _head = 0;
         _count--;
         return true;
     }
@@ -126,8 +126,11 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
         if (_count == 0) return Array.Empty<T>();
 
         var result = new T[_count];
-        for (int i = 0; i < _count; i++)
-            result[i] = _array![(_head + i) % _capacity];
+        for (int i = 0, index = _head; i < _count; i++)
+        {
+            result[i] = _array![index];
+            if (++index == _capacity) index = 0;
+        }
         return result;
     }
 
@@ -137,8 +140,11 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
         int count = _count;
         int head = _head;
         var array = _array;
-        for (int i = 0; i < count; i++)
-            yield return array![((head + i) % _capacity)];
+        for (int i = 0, index = head; i < count; i++)
+        {
+            yield return array![index];
+            if (++index == _capacity) index = 0;
+        }
     }
 
     /// <inheritdoc />
