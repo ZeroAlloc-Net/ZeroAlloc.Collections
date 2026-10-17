@@ -59,7 +59,7 @@ public ref struct PooledQueue<T>
             Grow();
 
         _array![_tail] = item;
-        _tail = (_tail + 1) % _array.Length;
+        if (++_tail == _array.Length) _tail = 0;
         _count++;
     }
 
@@ -75,7 +75,7 @@ public ref struct PooledQueue<T>
         item = _array![_head];
         if (RuntimeHelpers.IsReferenceOrContainsReferences<T>())
             _array[_head] = default!;
-        _head = (_head + 1) % _array.Length;
+        if (++_head == _array.Length) _head = 0;
         _count--;
         return true;
     }
@@ -168,7 +168,12 @@ public ref struct PooledQueue<T>
         public readonly T Current
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => _array[(_head + _index) % _capacity];
+            get
+            {
+                // _head < _capacity and _index < _count <= _capacity, so one subtraction wraps it.
+                int i = _head + _index;
+                return _array[i < _capacity ? i : i - _capacity];
+            }
         }
     }
 

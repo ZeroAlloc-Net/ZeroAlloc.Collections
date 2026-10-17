@@ -66,6 +66,29 @@ public class PooledQueueTests
     }
 
     [Fact]
+    public void Foreach_AfterWrap_EnumeratesFifo()
+    {
+        // The pool may hand out a longer array than asked for, so advance the head through every
+        // offset up to 64; one of them leaves the five items straddling the end of the array.
+        for (int offset = 0; offset < 64; offset++)
+        {
+            using var queue = new PooledQueue<int>(4);
+            for (int i = 0; i < offset; i++)
+            {
+                queue.Enqueue(i);
+                queue.TryDequeue(out _);
+            }
+            for (int i = 0; i < 5; i++) queue.Enqueue(i);
+
+            var results = new List<int>();
+            foreach (var item in queue)
+                results.Add(item);
+
+            Assert.Equal(new[] { 0, 1, 2, 3, 4 }, results);
+        }
+    }
+
+    [Fact]
     public void Clear_ResetsQueue()
     {
         using var queue = new PooledQueue<int>();

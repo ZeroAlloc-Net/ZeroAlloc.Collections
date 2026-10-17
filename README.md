@@ -14,8 +14,9 @@ whose `ref struct` forms add, look up and enumerate with 0 B allocated, NativeAO
 
 - **0 B on the hot path, asserted in CI.** The `ref struct` collections add, look up and enumerate with
   0 B allocated per call; `AllocationTests` fails CI if any of them allocates.
-- **About 2× faster than the BCL for lists, stacks and dictionaries.** Adding 1,000 items to a `PooledList<int>`
-  takes 0.51× the time of `List<int>`, which allocates 8,424 B in the same run.
+- **Faster than the BCL as well.** Adding 1,000 items to a `PooledList<int>` takes 0.63× the time of
+  `List<int>`, which allocates 8,424 B in the same run. Stacks, queues and dictionaries take 0.6–0.8×,
+  and a `RingBuffer<int>` takes 0.47× a pre-sized `Queue<int>`.
 - **Works under NativeAOT and trimming.** No reflection and no runtime code generation; every PR
   publishes and runs an AOT sample.
 - **Compile-time diagnostics instead of runtime surprises.** `ZAC001` warns when a pooled collection is
@@ -74,12 +75,12 @@ BenchmarkDotNet, N = 1,000. Time is the same-run ratio against the BCL type; all
 
 | Workload | BCL type | ZeroAlloc time | BCL alloc | ZeroAlloc alloc |
 |---|---|---:|---:|---:|
-| Add N items | `List<int>` | 0.51× | 8,424 B | 0 B |
-| Push and pop N items | `Stack<int>` | 0.55× | 8,424 B | 0 B |
-| Write and read N items, capacity known | `Queue<int>` | 2.40× | 4,064 B | 0 B |
+| Add N items | `List<int>` | 0.63× | 8,424 B | 0 B |
+| Push and pop N items | `Stack<int>` | 0.62× | 8,424 B | 0 B |
+| Enqueue and dequeue N items | `Queue<int>` | 0.79× | 8,432 B | 0 B |
+| Write and read N items, capacity known | `Queue<int>` | 0.47× | 4,064 B | 0 B |
 
-`RingBuffer<T>` and `PooledQueue<T>` trade speed for allocation, and the `Heap*` classes allocate one
-enumerator per `foreach`. Every workload, with the full numbers: [docs/performance.md](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md).
+The `Heap*` classes allocate one enumerator per `foreach`. Every workload, with the full numbers: [docs/performance.md](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md).
 
 ## Learn more
 

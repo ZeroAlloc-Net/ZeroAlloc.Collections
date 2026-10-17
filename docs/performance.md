@@ -15,7 +15,7 @@ The standard .NET collection types perform heap operations on common code paths:
 - **`List<T>`** allocates a new `T[]` and copies every time it grows. The old array becomes garbage.
 - **`Dictionary<TKey, TValue>`** allocates `Entry` arrays and bucket arrays. Resizing copies everything into a new, larger set of arrays.
 - **`Queue<T>` and `Stack<T>`** use the same grow-and-copy pattern as `List<T>`.
-- **`IEnumerator<T>`** — calling `GetEnumerator()` on any BCL collection allocates a class instance on the heap (or boxes a struct enumerator when accessed through the interface).
+- **`IEnumerator<T>`** — the BCL collections return struct enumerators, but enumerating one through `IEnumerable<T>` boxes the enumerator onto the heap.
 
 Each of these is a heap allocation. Under high throughput, GC pressure builds up. The minor GC pauses that result may be invisible at low load but become measurable — and sometimes dominant — in latency-sensitive workloads.
 
@@ -81,72 +81,124 @@ Reading `HeapSpanDictionary.Keys` or `.Values`, and calling `Count` or `Contains
 
 ## Benchmark Results
 
-Benchmarks are run with BenchmarkDotNet on .NET 9.0, Windows 11, x64 RyuJIT AVX2. Full benchmark source is in `tests/ZeroAlloc.Collections.Benchmarks/`. Run `dotnet run -c Release` in that project to reproduce results on your hardware.
+Measured 2026-10-17 with BenchmarkDotNet v0.15.8 on an otherwise idle machine. Full benchmark
+source is in `tests/ZeroAlloc.Collections.Benchmarks/`.
+
+```
+BenchmarkDotNet v0.15.8, Windows 11 (10.0.26300.9711)
+12th Gen Intel Core i9-12900HK 2.50GHz, 1 CPU, 20 logical and 14 physical cores
+.NET SDK 10.0.402
+  [Host] : .NET 9.0.21 (9.0.21, 9.0.2126.50404), X64 RyuJIT x86-64-v3
+```
+
+> Allocations are exact. Speed is shown as same-run ratios; absolute timings are not published.
+
+Each benchmark ran out of process in three launches of 6 warmup and 15 measured iterations, pinned
+to two performance cores. `Ratio` is each row's mean time relative to the BCL baseline in the same
+run; `Launch range` is the lowest and highest ratio of the three launches. To reproduce:
+
+```bash
+dotnet run --project tests/ZeroAlloc.Collections.Benchmarks -c Release --   --filter "*" --launchCount 3 --warmupCount 6 --iterationCount 15
+```
+
+The benchmark classes carry `[ShortRunJob]` so the manual CI run stays short; the counts on the
+command line override it.
 
 ### Add N items
 
-| N | BCL (`List<int>`) | `PooledList<int>` | Speedup | BCL Alloc | ZA Alloc |
-|------:|------------------:|------------------:|--------:|----------:|---------:|
-| 100 | 263 ns | 111 ns | 2.4× | 1,184 B | 0 B |
-| 1,000 | 1,330 ns | 681 ns | 2.0× | 8,424 B | 0 B |
-| 10,000 | 15,104 ns | 7,040 ns | 2.1× | 131,400 B | ~1 B |
+| N | `List<int>` | `PooledList<int>` | Launch range | BCL alloc | ZA alloc |
+|------:|---:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.50 | 0.47–0.56 | 1,184 B | 0 B |
+| 1,000 | 1.00 | 0.63 | 0.63–0.64 | 8,424 B | 0 B |
+| 10,000 | 1.00 | 0.58 | 0.57–0.58 | 131,400 B | 0 B |
 
 ### Enumerate N items (foreach)
 
-| N | BCL (`List<int>`) | `PooledList<int>` | BCL Alloc | ZA Alloc |
-|------:|------------------:|------------------:|----------:|---------:|
-| 100 | 149 ns | 145 ns | 456 B | 0 B |
-| 1,000 | 1,216 ns | 1,592 ns | 4,056 B | 0 B |
-| 10,000 | 11,980 ns | 11,706 ns | 40,056 B | ~1 B |
+Each row builds a pre-sized list of N items, then enumerates it with `foreach`. Ratios against the
+`List<int>` row in the same run.
 
-> `List<int>` enumerator allocation comes from boxing the `List<T>.Enumerator` struct when accessed through `IEnumerable<T>`. The ZeroAlloc `ref struct` enumerator is never boxed.
+| N | `List<int>` | `PooledList<int>` | BCL alloc | ZA alloc |
+|------:|---:|---:|---:|---:|
+| 100 | 1.00 | 1.11 | 456 B | 0 B |
+| 1,000 | 1.00 | 1.41 | 4,056 B | 0 B |
+| 10,000 | 1.00 | 1.39 | 40,056 B | 0 B |
+
+> The BCL allocation is the list itself; `foreach` over a `List<int>` uses its struct enumerator and allocates nothing. `PooledList<int>` rents its buffer, so the whole build-and-enumerate allocates nothing, at some cost in speed.
 
 ### Push/pop N items
 
-| N | BCL (`Stack<int>`) | `PooledStack<int>` | Speedup | BCL Alloc | ZA Alloc |
-|------:|-------------------:|-------------------:|--------:|----------:|---------:|
-| 100 | 357 ns | 197 ns | 1.8× | 1,184 B | 0 B |
-| 1,000 | 2,590 ns | 1,429 ns | 1.8× | 8,424 B | 0 B |
-| 10,000 | 23,021 ns | 14,853 ns | 1.5× | 131,400 B | 2 B |
+| N | `Stack<int>` | `PooledStack<int>` | Launch range | BCL alloc | ZA alloc |
+|------:|---:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.60 | 0.58–0.63 | 1,184 B | 0 B |
+| 1,000 | 1.00 | 0.62 | 0.62–0.63 | 8,424 B | 0 B |
+| 10,000 | 1.00 | 0.60 | 0.59–0.63 | 131,400 B | 0 B |
 
 ### Enqueue/dequeue N items
 
-| N | BCL (`Queue<int>`) | `PooledQueue<int>` | BCL Alloc | ZA Alloc |
-|------:|-------------------:|-------------------:|----------:|---------:|
-| 100 | 439 ns | 744 ns | 1,192 B | 0 B |
-| 1,000 | 3,172 ns | 8,967 ns | 8,432 B | 0 B |
-| 10,000 | 37,196 ns | 126,427 ns | 131,408 B | 16 B |
-
-> `PooledQueue` is slower than BCL `Queue` for large N due to the grow-and-unwrap operation required to maintain circular-buffer invariants in a pooled array. The allocation saving is 100% for N ≤ 1,000. Use `RingBuffer<T>` instead of `PooledQueue<T>` when capacity is known in advance — it has no grow overhead.
+| N | `Queue<int>` | `PooledQueue<int>` | Launch range | BCL alloc | ZA alloc |
+|------:|---:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.51 | 0.50–0.53 | 1,192 B | 0 B |
+| 1,000 | 1.00 | 0.79 | 0.78–0.81 | 8,432 B | 0 B |
+| 10,000 | 1.00 | 0.70 | 0.69–0.73 | 131,408 B | 0 B |
 
 ### Add + lookup N entries
 
-| N | BCL (`Dictionary<string,int>`) | `SpanDictionary<string,int>` | Speedup | BCL Alloc | ZA Alloc |
-|------:|-------------------------------:|-----------------------------:|--------:|----------:|---------:|
-| 100 | 1,270 ns | 719 ns | 1.8× | 7.4 KB | 0 B |
-| 1,000 | 11,821 ns | 6,368 ns | 1.9× | 71.5 KB | 0 B |
+Ratios against `Dictionary<string,int>` add-then-lookup in the same run.
+
+| N | `Dictionary<string,int>` | `SpanDictionary<string,int>` | BCL alloc | ZA alloc |
+|------:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.64 | 7,392 B | 0 B |
+| 1,000 | 1.00 | 0.60 | 73,168 B | 0 B |
 
 > `SpanDictionary` allocates **0 bytes** because its entry array is rented from `ArrayPool<T>` and returned on `Dispose`. The open-addressing layout (no `Node` objects, no bucket chains) also eliminates the per-entry allocation overhead found in `Dictionary`.
 
+### Concurrent fill, N entries
+
+| N | `ConcurrentDictionary` | `Dictionary` + `lock` | `ConcurrentHeapSpanDictionary` | Launch range | BCL alloc | `Dictionary` + `lock` alloc | ZA alloc |
+|------:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.55 | 0.55 | 0.55–0.55 | 12,432 B | 7,416 B | 112 B |
+| 1,000 | 1.00 | 0.52 | 0.51 | 0.50–0.52 | 138,032 B | 73,192 B | 112 B |
+
+> The 112 B is the `ConcurrentHeapSpanDictionary` object itself; its storage is pooled.
+
 ### Write/read N items, capacity known up front
 
-| N | BCL (`Queue<int>`) | `RingBuffer<int>` | `HeapRingBuffer<int>` | BCL Alloc | ZA Alloc |
-|------:|-------------------:|------------------:|----------------------:|----------:|---------:|
-| 100 | 664 ns | 1,440 ns | 1,497 ns | 464 B | 0 B |
-| 1,000 | 6,224 ns | 14,944 ns | 15,249 ns | 4,064 B | 0 B |
+| N | `Queue<int>` | `RingBuffer<int>` | Launch range | `HeapRingBuffer<int>` | Launch range | BCL alloc | ZA alloc |
+|------:|---:|---:|---:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.41 | 0.39–0.43 | 0.78 | 0.77–0.78 | 464 B | 0 B |
+| 1,000 | 1.00 | 0.47 | 0.45–0.49 | 0.70 | 0.68–0.73 | 4,064 B | 0 B |
 
-> `RingBuffer` trades speed for allocation here: a pre-sized `Queue<int>` is about 2.2-2.4x faster in this single-threaded write-then-read loop, but allocates its array on every run.
+> `RingBuffer` is about twice as fast as a pre-sized `Queue<int>` in this single-threaded write-then-read loop, and allocates nothing.
 
 ### Add + enumerate N items, fixed capacity
 
-| N | BCL (`List<int>`, pre-sized) | `FixedSizeList<int>` (stackalloc) | `HeapFixedSizeList<int>` | BCL Alloc | `FixedSizeList` Alloc | `HeapFixedSizeList` Alloc |
-|------:|------:|------:|------:|------:|------:|------:|
-| 100 | 405 ns | 310 ns | 537 ns | 456 B | 0 B | 496 B |
-| 1,000 | 2,166 ns | 1,466 ns | 4,134 ns | 4,056 B | 0 B | 4,096 B |
+| N | `List<int>`, pre-sized | `FixedSizeList<int>` (stackalloc) | `HeapFixedSizeList<int>` | BCL alloc | `FixedSizeList` alloc | `HeapFixedSizeList` alloc |
+|------:|---:|---:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.88 | 1.42 | 456 B | 0 B | 496 B |
+| 1,000 | 1.00 | 0.83 | 1.49 | 4,056 B | 0 B | 4,096 B |
 
 > `HeapFixedSizeList` allocates a plain `T[]`, not a pooled buffer, plus one enumerator per `foreach`.
 
-The key metric is the **ZA Alloc** column. The `ref struct` collections target 0 B allocated on all paths except initial pool rent and `ToArray()`. The `Heap*` collections additionally allocate the collection object itself and one enumerator per `foreach`, as listed in [Zero-Allocation Enumerators](#3-zero-allocation-enumerators).
+### `foreach` over the `Heap*` classes, N = 100
+
+Ratios against `foreach` over a `List<int>` in the same run.
+
+| Collection | Ratio | Launch range | Allocated |
+|---|---:|---:|---:|
+| `List<int>` | 1.00 | | 0 B |
+| `HeapPooledList<int>` | 2.24 | 2.18–2.27 | 40 B |
+| `HeapPooledQueue<int>` | 2.67 | 2.66–2.67 | 40 B |
+| `HeapPooledStack<int>` | 2.21 | 2.18–2.27 | 40 B |
+| `HeapRingBuffer<int>` | 2.48 | 2.47–2.48 | 56 B |
+| `HeapFixedSizeList<int>` | 2.26 | 2.26–2.27 | 40 B |
+| `HeapSpanDictionary<int, int>` | 17.08 | 17.07–17.08 | 40 B |
+| `HeapSpanDictionary<int, int>.Keys` | 9.24 | 9.23–9.25 | 40 B |
+| `HeapSpanDictionary<int, int>.Keys.Count` | 0.01 | 0.01–0.01 | 0 B |
+| `ConcurrentHeapSpanDictionary<int, int>` | 7.47 | 7.32–7.57 | 32 B |
+
+> These go through the `IEnumerator<T>` that `GetEnumerator()` returns; struct enumerators are planned in [#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152).
+
+The key metric is the **ZA alloc** column. The `ref struct` collections target 0 B allocated on all paths except initial pool rent and `ToArray()`. The `Heap*` collections additionally allocate the collection object itself and one enumerator per `foreach`, as listed in [Zero-Allocation Enumerators](#3-zero-allocation-enumerators).
 
 ## When Zero Allocation Matters
 
