@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.3...v1.2.4) (2026-10-18)
+
+
+### Performance
+
+* wrap ring-buffer and queue indexes without a division ([#175](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/175)) ([ee2b6bb](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/ee2b6bb31e6b1a55f7254c22c0d3bba7c911ac4f))
+
 ## [1.2.3](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.2...v1.2.3) (2026-10-16)
 
 
