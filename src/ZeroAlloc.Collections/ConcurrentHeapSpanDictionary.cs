@@ -317,7 +317,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
 
         for (int i = 0; i < capacity; i++)
         {
-            int index = (hash + i) % capacity;
+            int index = (int)(((uint)hash + (uint)i) % (uint)capacity);
             ref Entry entry = ref entries[index];
 
             if (entry.State == EntryState.Empty)
@@ -354,7 +354,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
 
         for (int i = 0; i < capacity; i++)
         {
-            int index = (hash + i) % capacity;
+            int index = (int)(((uint)hash + (uint)i) % (uint)capacity);
             ref Entry entry = ref entries[index];
 
             if (entry.State == EntryState.Empty)
@@ -410,7 +410,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
 
         for (int i = 0; i < capacity; i++)
         {
-            int index = (hash + i) % capacity;
+            int index = (int)(((uint)hash + (uint)i) % (uint)capacity);
             ref Entry entry = ref entries[index];
 
             if (entry.State == EntryState.Empty)
@@ -451,7 +451,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
             int hash = old.HashCode;
             for (int j = 0; j < newCapacity; j++)
             {
-                int index = (hash + j) % newCapacity;
+                int index = (int)(((uint)hash + (uint)j) % (uint)newCapacity);
                 if (newEntries[index].State == EntryState.Empty)
                 {
                     newEntries[index] = old;
