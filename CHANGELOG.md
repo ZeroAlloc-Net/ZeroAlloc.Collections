@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.5](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.4...v1.2.5) (2026-10-29)
+
+
+### Bug Fixes
+
+* avoid int overflow in dictionary probe index ([#187](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/187)) ([3802b17](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/3802b172599e5ca841a45cf7038040d757d711df)), closes [#186](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/186)
+
 ## [1.2.4](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.3...v1.2.4) (2026-10-18)
 
 
