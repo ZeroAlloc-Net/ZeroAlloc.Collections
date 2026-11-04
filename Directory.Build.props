@@ -76,6 +76,10 @@
     <!-- MA0158 asks for System.Threading.Lock instead of a lock object. That type is .NET 9+
          and this library still targets net8.0 and netstandard2.0, so it is not available. -->
     <NoWarn>$(NoWarn);MA0158</NoWarn>
+    <!-- NuGetAudit as in ci-baseline, so a local restore reports the same advisories as CI. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>moderate</NuGetAuditLevel>
 </PropertyGroup>
   <ItemGroup Condition="'$(IsPackable)' != 'false'">
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" />
