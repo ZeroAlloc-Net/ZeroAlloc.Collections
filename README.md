@@ -67,7 +67,7 @@ Console.WriteLine($"{basket.Count} items, {total}"); // 3 items, 1.75
 - **`Span<T>` access** to the list and stack contents for zero-copy loops.
 - **Source generators** that emit type-specific collections from `[ZeroAllocList(typeof(T))]`.
   See [source generators](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/source-generators.md).
-- Targets `netstandard2.1`, `net8.0` and `net9.0`.
+- Targets `netstandard2.1`, `net8.0`, `net9.0` and `net11.0`.
 
 ## Performance
 

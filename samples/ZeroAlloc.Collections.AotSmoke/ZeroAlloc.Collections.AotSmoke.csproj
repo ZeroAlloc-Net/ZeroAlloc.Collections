@@ -1,12 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <!-- net10.0 so the publish runs the net10 ILCompiler, the one consumers on current
+    <!-- net11.0 so the publish runs the net11 ILCompiler, the one consumers on current
          .NET get. NativeAOT codegen bugs such as dotnet/runtime#134799 live in a specific
-         ILCompiler version, and a net9.0 smoke never compiles with the net10 one. The app
-         still consumes the lib's net9.0 asset, exactly as a net10 consumer of the package
-         does, so the lib keeps its ns2.1;net8.0;net9.0 targets. -->
-    <TargetFramework>net10.0</TargetFramework>
+         ILCompiler version, and an older smoke never compiles with the newest one. The app
+         consumes the lib's net11.0 asset, exactly as a net11 consumer of the package
+         does, so the lib keeps its ns2.1;net8.0;net9.0;net11.0 targets. -->
+    <TargetFramework>net11.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ZeroAlloc.Collections\ZeroAlloc.Collections.csproj"
-                      SetTargetFramework="TargetFramework=net9.0" />
+                      SetTargetFramework="TargetFramework=net11.0" />
     <ProjectReference Include="..\..\src\ZeroAlloc.Collections.Generators\ZeroAlloc.Collections.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"

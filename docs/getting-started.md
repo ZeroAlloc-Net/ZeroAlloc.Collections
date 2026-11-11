@@ -16,7 +16,7 @@ ZeroAlloc.Collections is a zero-allocation collections library for .NET that pro
 dotnet add package ZeroAlloc.Collections
 ```
 
-The package targets `netstandard2.1`, `net8.0`, and `net9.0`. Source generators for specialized collection types are bundled automatically — no additional package reference is required.
+The package targets `netstandard2.1`, `net8.0`, `net9.0`, and `net11.0`. Source generators for specialized collection types are bundled automatically — no additional package reference is required.
 
 ## Your First Collection
 
