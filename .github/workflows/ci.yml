@@ -152,6 +152,9 @@ jobs:
 
   api-compat:
     uses: ZeroAlloc-Net/.github/.github/workflows/api-compat.yml@main
+    with:
+      # The shared workflow installs only this SDK, and global.json pins 11.0.100.
+      dotnet-version: 11.0.x
 
   # A release PR must mark everything it releases as shipped: the analyzer rules in
   # AnalyzerReleases.Unshipped.md and the API in every PublicAPI.Unshipped.txt. The
