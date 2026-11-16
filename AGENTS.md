@@ -40,7 +40,7 @@ Fast inner loop (run locally, passes):
 
 Benchmarks run from `benchmarks.yml`, job `full`:
 - `dotnet build tests/ZeroAlloc.Collections.Benchmarks -c Release`
-- `dotnet run --project tests/ZeroAlloc.Collections.Benchmarks -c Release --no-build -- --filter "$FILTER"`
+- `dotnet run --project tests/ZeroAlloc.Collections.Benchmarks -c Release --no-build -- --filter "${FILTER:-*}"`
 
 The benchmark project targets only `net9.0`, not the library's LTS `net8.0`, which the org rule below asks for.
 
