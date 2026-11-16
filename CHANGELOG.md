@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.3.0...v1.3.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* embed PDBs so Go to Definition shows the package source ([#212](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/212)) ([d7d1528](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/d7d1528ceb26f3563d7f78066d75bd96d892e799))
+
 ## [1.3.0](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.2.5...v1.3.0) (2026-11-11)
 
 
