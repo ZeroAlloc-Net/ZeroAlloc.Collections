@@ -38,7 +38,11 @@ Fast inner loop (run locally, passes):
 - `dotnet build ZeroAlloc.Collections.slnx -c Release`
 - `dotnet test tests/ZeroAlloc.Collections.Tests -c Release --no-build -f net9.0 --filter "FullyQualifiedName~AllocationTests"`
 
-Benchmarks run from `benchmarks.yml`: `dotnet build tests/ZeroAlloc.Collections.Benchmarks -c Release`.
+Benchmarks run from `benchmarks.yml`, job `full`:
+- `dotnet build tests/ZeroAlloc.Collections.Benchmarks -c Release`
+- `dotnet run --project tests/ZeroAlloc.Collections.Benchmarks -c Release --no-build -- --filter "$FILTER"`
+
+The benchmark project targets only `net9.0`, not the library's LTS `net8.0`, which the org rule below asks for.
 
 ## Conventions and gotchas
 - Warnings are errors (`TreatWarningsAsErrors`, Meziantou.Analyzer, `EnforceCodeStyleInBuild`). Fix the
@@ -56,8 +60,8 @@ Benchmarks run from `benchmarks.yml`: `dotnet build tests/ZeroAlloc.Collections.
 - `AllocationTests` is the allocation contract. The `ref struct` collections must stay at 0 B per call
   (`AllocationGate.AssertBudget(0, ...)`); paths that allocate are pinned to their exact figure. A change
   that moves a number must change the test on purpose, not loosen the budget.
-- `ref struct` collections cannot appear in `async` methods, in lambdas that capture them, or as fields
-  of classes. Tests that use them stay synchronous. Pooled types rent from `ArrayPool<T>.Shared` and
+- `ref struct` collections cannot be class fields or be captured by lambdas. In `async` methods they may
+  only be locals that do not live across an `await` (C# 13 and later). Tests that use them stay synchronous. Pooled types rent from `ArrayPool<T>.Shared` and
   must be disposed (diagnostic `ZAC001` flags a missing dispose).
 - The library reports `IsAotCompatible` for `net8.0` and later. No reflection, no runtime code
   generation. New generator output must also publish cleanly in `AotSmoke`.
