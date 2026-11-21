@@ -287,6 +287,30 @@ public class HeapStructEnumeratorTests
     }
 
     [Fact]
+    public void HeapSpanDictionary_Enumeration_ThrowsWhenDisposed()
+    {
+        var dict = new HeapSpanDictionary<int, int>();
+        dict.Add(1, 10);
+        dict.Add(2, 20);
+
+        var pairs = dict.GetEnumerator();
+        var keys = dict.Keys.GetEnumerator();
+        var values = dict.Values.GetEnumerator();
+        Assert.True(pairs.MoveNext());
+        Assert.True(keys.MoveNext());
+        Assert.True(values.MoveNext());
+
+        dict.Dispose();
+
+        Assert.Throws<InvalidOperationException>(() => pairs.MoveNext());
+        Assert.Throws<InvalidOperationException>(() => pairs.Reset());
+        Assert.Throws<InvalidOperationException>(() => keys.MoveNext());
+        Assert.Throws<InvalidOperationException>(() => keys.Reset());
+        Assert.Throws<InvalidOperationException>(() => values.MoveNext());
+        Assert.Throws<InvalidOperationException>(() => values.Reset());
+    }
+
+    [Fact]
     public void HeapSpanDictionary_Enumeration_AllowsRemoveAndOverwrite()
     {
         using var dict = new HeapSpanDictionary<int, int>();
