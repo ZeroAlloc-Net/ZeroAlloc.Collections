@@ -149,7 +149,7 @@ public double RollingAverage(ReadOnlySpan<double> samples, int windowSize)
 
 `Clear()` resets head, tail, and count to zero and clears references for reference types. The rented buffer is retained.
 
-`Dispose()` returns the rented buffer to the pool.
+`Dispose()` returns the rented buffer to the pool. On `HeapRingBuffer` it also empties the buffer, so `Count` is 0 and a `foreach` yields nothing. It is safe to call more than once.
 
 ## API Reference
 
@@ -184,4 +184,4 @@ public double RollingAverage(ReadOnlySpan<double> samples, int windowSize)
 | Method | `void Clear()` | Resets head, tail, and count; retains buffer. |
 | Method | `T[] ToArray()` | Copies elements to a new array in FIFO order. |
 | Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (FIFO order). |
-| Method | `void Dispose()` | Returns the rented buffer to the pool. |
+| Method | `void Dispose()` | Returns the rented buffer to the pool and empties the collection: `Count` is 0 and a `foreach` yields nothing. Safe to call more than once. |

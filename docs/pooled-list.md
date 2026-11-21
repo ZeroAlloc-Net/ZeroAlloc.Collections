@@ -271,4 +271,4 @@ Copy to an array with `ToArray()` if the data must outlive the list.
 | Method | `bool Remove(T item)` | Removes first occurrence; returns `true` if found. |
 | Method | `void CopyTo(T[] array, int arrayIndex)` | Copies elements to a target array. |
 | Method | `Enumerator GetEnumerator()` | Returns a zero-alloc struct enumerator. |
-| Method | `void Dispose()` | Returns the rented buffer to the pool. |
+| Method | `void Dispose()` | Returns the rented buffer to the pool and empties the collection: `Count` is 0 and a `foreach` yields nothing. Safe to call more than once. |

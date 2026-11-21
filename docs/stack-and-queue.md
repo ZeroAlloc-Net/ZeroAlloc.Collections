@@ -189,7 +189,7 @@ int[] arr = queue.ToArray(); // [10, 20, 30]
 Both stack and queue follow the same conventions:
 
 - `Clear()` resets count (and head/tail for queue) to zero, clears references for reference types, and retains the rented buffer.
-- `Dispose()` returns the rented buffer to the pool. Safe to call multiple times.
+- `Dispose()` returns the rented buffer to the pool. Safe to call multiple times. `HeapPooledStack` and `HeapPooledQueue` also empty the collection on `Dispose()`: `Count` is 0 and a `foreach` yields nothing.
 
 ---
 
@@ -272,7 +272,7 @@ public void BreadthFirst(TreeNode root, Action<TreeNode> visit)
 | Method | `void Clear()` | Resets count to zero; retains buffer. |
 | Method | `T[] ToArray()` | New array in top-first order. |
 | Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (top-to-bottom). |
-| Method | `void Dispose()` | Returns the rented buffer to the pool. |
+| Method | `void Dispose()` | Returns the rented buffer to the pool and empties the collection: `Count` is 0 and a `foreach` yields nothing. Safe to call more than once. |
 
 ### PooledQueue&lt;T&gt; (ref struct)
 
@@ -306,4 +306,4 @@ public void BreadthFirst(TreeNode root, Action<TreeNode> visit)
 | Method | `void Clear()` | Resets head, tail, and count; retains buffer. |
 | Method | `T[] ToArray()` | New array in FIFO order. |
 | Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (FIFO order). |
-| Method | `void Dispose()` | Returns the rented buffer to the pool. |
+| Method | `void Dispose()` | Returns the rented buffer to the pool and empties the collection: `Count` is 0 and a `foreach` yields nothing. Safe to call more than once. |
