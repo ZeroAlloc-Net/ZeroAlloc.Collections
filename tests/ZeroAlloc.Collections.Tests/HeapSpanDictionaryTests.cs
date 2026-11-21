@@ -240,7 +240,7 @@ public class HeapSpanDictionaryTests
 
         dict.Remove(1);
         Assert.Equal(new[] { 2 }, keys);
-        Assert.False(keys.Contains(1));
+        Assert.DoesNotContain(1, keys);
     }
 
     [Fact]
@@ -249,11 +249,13 @@ public class HeapSpanDictionaryTests
         using var dict = new HeapSpanDictionary<int, string>(4);
         dict.Add(1, "one");
 
-        Assert.True(dict.Keys.IsReadOnly);
-        Assert.True(dict.Values.IsReadOnly);
-        Assert.Throws<NotSupportedException>(() => dict.Keys.Add(2));
-        Assert.Throws<NotSupportedException>(() => dict.Keys.Remove(1));
-        Assert.Throws<NotSupportedException>(() => dict.Values.Clear());
+        ICollection<int> keys = dict.Keys;
+        ICollection<string> values = dict.Values;
+        Assert.True(keys.IsReadOnly);
+        Assert.True(values.IsReadOnly);
+        Assert.Throws<NotSupportedException>(() => keys.Add(2));
+        Assert.Throws<NotSupportedException>(() => keys.Remove(1));
+        Assert.Throws<NotSupportedException>(() => values.Clear());
         Assert.Single(dict);
     }
 
@@ -270,8 +272,8 @@ public class HeapSpanDictionaryTests
         var values = new int[5];
         dict.Values.CopyTo(values, 0);
         Assert.Equal(new[] { 0, 10, 20, 30, 40 }, values.Order());
-        Assert.True(dict.Values.Contains(30));
-        Assert.False(dict.Values.Contains(35));
+        Assert.Contains(30, dict.Values);
+        Assert.DoesNotContain(35, dict.Values);
 
         Assert.Throws<ArgumentOutOfRangeException>(() => dict.Keys.CopyTo(new int[5], 1));
         Assert.Throws<ArgumentNullException>(() => dict.Keys.CopyTo(null!, 0));

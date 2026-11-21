@@ -97,7 +97,7 @@ foreach (var kvp in dict)
     Console.WriteLine($"{kvp.Key} = {kvp.Value}");
 ```
 
-The ref struct variant uses a `ref struct Enumerator` (zero allocation). The class variant returns `IEnumerator<KeyValuePair<TKey, TValue>>`.
+The ref struct variant uses a `ref struct Enumerator` (zero allocation). The class variant returns a public struct `Enumerator`, which does not allocate either.
 
 ## Comparison with BCL Dictionary
 
@@ -170,8 +170,8 @@ public void CountWords(ReadOnlySpan<string> words)
 | Constructor | `HeapSpanDictionary(int capacity)` | Explicit initial capacity. |
 | Property | `int Count` | Number of occupied entries. |
 | Property | `bool IsReadOnly` | Always `false`. |
-| Property | `ICollection<TKey> Keys` | Read-only live view of the keys. Created once and cached, so reading the property allocates nothing. |
-| Property | `ICollection<TValue> Values` | Read-only live view of the values. Created once and cached, so reading the property allocates nothing. |
+| Property | `KeyCollection Keys` | Read-only live view of the keys. Created once and cached, so reading the property allocates nothing. |
+| Property | `ValueCollection Values` | Read-only live view of the values. Created once and cached, so reading the property allocates nothing. |
 | Indexer | `TValue this[TKey key]` | Gets or sets the value for `key`. |
 | Method | `void Add(TKey key, TValue value)` | Inserts a new entry. Throws if key exists. |
 | Method | `void Add(KeyValuePair<TKey, TValue> item)` | Inserts via `KeyValuePair`. |
@@ -182,9 +182,11 @@ public void CountWords(ReadOnlySpan<string> words)
 | Method | `bool Remove(KeyValuePair<TKey, TValue> item)` | Removes if key and value both match. |
 | Method | `void Clear()` | Resets all entries; retains array. |
 | Method | `void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)` | Copies entries to a target array. |
-| Method | `IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()` | Returns a heap-allocated `IEnumerator`; each `foreach` allocates about 56 B. |
+| Method | `Enumerator GetEnumerator()` | Returns a zero-alloc struct enumerator. Adding a key, clearing or disposing the dictionary during the enumeration throws `InvalidOperationException`. |
 | Method | `void Dispose()` | Releases internal state. |
 
 `Keys` and `Values` behave like the views of `Dictionary<TKey, TValue>`: they reflect later changes, `Add`, `Remove` and `Clear` on them throw `NotSupportedException`, and adding a key to, or clearing, the dictionary while a view is being enumerated throws `InvalidOperationException`. Removing keys and overwriting values during that enumeration is allowed. In 1.2.0 and earlier both properties returned a new `List<T>` copy on every read.
 
-Enumerating `HeapSpanDictionary` itself, or a `foreach` over `Keys` or `Values`, still allocates one enumerator object, because the public signatures return interfaces. Struct enumerators for the `Heap*` collections need a breaking change and are tracked for the next major in [#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152).
+`Keys` and `Values` are the public sealed types `HeapSpanDictionary<TKey, TValue>.KeyCollection` and `.ValueCollection`, the way `Dictionary<TKey, TValue>` has them. Each implements `ICollection<T>` and `IReadOnlyCollection<T>`, with the mutating members implemented explicitly, and has a public struct `Enumerator`. A `foreach` over the dictionary, over `Keys` or over `Values` allocates nothing. In 1.x these returned interfaces, and every `foreach` allocated one enumerator object.
+
+Enumerating the dictionary itself follows the same rule as the views: adding a key, clearing or disposing the dictionary during the enumeration throws `InvalidOperationException`, while removing keys and overwriting values is allowed. In 1.x it did not check, and an enumeration that outlived a growth of the table silently skipped or repeated entries.

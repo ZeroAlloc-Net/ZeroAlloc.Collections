@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;net8.0;net9.0;net11.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -9,9 +9,6 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Lock public API surface: undeclared additions (RS0016) and removals (RS0017) are build errors. -->
     <WarningsAsErrors>$(WarningsAsErrors);RS0016;RS0017</WarningsAsErrors>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 

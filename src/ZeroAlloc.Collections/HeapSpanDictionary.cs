@@ -90,20 +90,24 @@ public sealed class HeapSpanDictionary<TKey, TValue>
 
     /// <summary>
     /// Gets a read-only, live view of the keys. The view is created once and cached, so reading
-    /// this property does not allocate. Adding a key or clearing the dictionary while the view is
-    /// being enumerated throws <see cref="InvalidOperationException"/>; removing keys or
-    /// overwriting values does not.
+    /// this property does not allocate, and its struct enumerator makes a <c>foreach</c> over it
+    /// allocation-free too. Adding a key or clearing the dictionary while the view is being
+    /// enumerated throws <see cref="InvalidOperationException"/>; removing keys or overwriting
+    /// values does not.
     /// </summary>
-    public ICollection<TKey> Keys => _keys ??= new KeyCollection(this);
+    public KeyCollection Keys => _keys ??= new KeyCollection(this);
 
     /// <summary>
     /// Gets a read-only, live view of the values. The view is created once and cached, so reading
-    /// this property does not allocate. Adding a key or clearing the dictionary while the view is
-    /// being enumerated throws <see cref="InvalidOperationException"/>; removing keys or
-    /// overwriting values does not.
+    /// this property does not allocate, and its struct enumerator makes a <c>foreach</c> over it
+    /// allocation-free too. Adding a key or clearing the dictionary while the view is being
+    /// enumerated throws <see cref="InvalidOperationException"/>; removing keys or overwriting
+    /// values does not.
     /// </summary>
-    public ICollection<TValue> Values => _values ??= new ValueCollection(this);
+    public ValueCollection Values => _values ??= new ValueCollection(this);
 
+    ICollection<TKey> IDictionary<TKey, TValue>.Keys => Keys;
+    ICollection<TValue> IDictionary<TKey, TValue>.Values => Values;
     IEnumerable<TKey> IReadOnlyDictionary<TKey, TValue>.Keys => Keys;
     IEnumerable<TValue> IReadOnlyDictionary<TKey, TValue>.Values => Values;
 
@@ -226,15 +230,15 @@ public sealed class HeapSpanDictionary<TKey, TValue>
         }
     }
 
-    /// <inheritdoc/>
-    public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-    {
-        for (int i = 0; i < _entries!.Length; i++)
-        {
-            if (_entries[i].State == EntryState.Occupied)
-                yield return new KeyValuePair<TKey, TValue>(_entries[i].Key, _entries[i].Value);
-        }
-    }
+    /// <summary>
+    /// Returns a struct enumerator over the key/value pairs, so a <c>foreach</c> does not allocate.
+    /// Enumerating through <see cref="IEnumerable{T}"/> boxes it. Adding a key, clearing or disposing
+    /// the dictionary during the enumeration throws <see cref="InvalidOperationException"/>;
+    /// removing keys or overwriting values does not.
+    /// </summary>
+    public Enumerator GetEnumerator() => new(this);
+
+    IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator() => GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -379,113 +383,294 @@ public sealed class HeapSpanDictionary<TKey, TValue>
     private static void ThrowVersionChanged() =>
         throw new InvalidOperationException("Collection was modified; enumeration operation may not execute.");
 
-    private abstract class ViewBase<T> : ICollection<T>, IReadOnlyCollection<T>
+    /// <summary>
+    /// Enumerates the key/value pairs of a <see cref="HeapSpanDictionary{TKey, TValue}"/>.
+    /// </summary>
+    public struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>
     {
-        protected readonly HeapSpanDictionary<TKey, TValue> Dictionary;
+        private readonly HeapSpanDictionary<TKey, TValue> _dictionary;
+        private readonly int _version;
+        private int _index;
+        private KeyValuePair<TKey, TValue> _current;
 
-        protected ViewBase(HeapSpanDictionary<TKey, TValue> dictionary) => Dictionary = dictionary;
+        internal Enumerator(HeapSpanDictionary<TKey, TValue> dictionary)
+        {
+            _dictionary = dictionary;
+            _version = dictionary._version;
+            _index = -1;
+            _current = default;
+        }
 
-        public int Count => Dictionary._count;
+        /// <summary>Gets the key/value pair at the current position of the enumerator.</summary>
+        public readonly KeyValuePair<TKey, TValue> Current => _current;
 
-        public bool IsReadOnly => true;
+        readonly object IEnumerator.Current => _current;
 
-        public abstract bool Contains(T item);
+        /// <summary>Advances the enumerator to the next key/value pair.</summary>
+        /// <returns><see langword="true"/> if there is a next pair; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="InvalidOperationException">A key was added, or the dictionary was cleared or disposed, after the enumerator was created.</exception>
+        public bool MoveNext()
+        {
+            var dictionary = _dictionary;
+            if (_version != dictionary._version) ThrowVersionChanged();
 
-        protected abstract T Select(ref Entry entry);
+            var entries = dictionary._entries;
+            if (entries is not null)
+            {
+                while (++_index < entries.Length)
+                {
+                    ref Entry entry = ref entries[_index];
+                    if (entry.State == EntryState.Occupied)
+                    {
+                        _current = new KeyValuePair<TKey, TValue>(entry.Key, entry.Value);
+                        return true;
+                    }
+                }
+            }
+            _current = default;
+            return false;
+        }
 
-        public void CopyTo(T[] array, int arrayIndex)
+        /// <summary>Sets the enumerator back to its initial position, before the first pair.</summary>
+        /// <exception cref="InvalidOperationException">A key was added, or the dictionary was cleared or disposed, after the enumerator was created.</exception>
+        public void Reset()
+        {
+            if (_version != _dictionary._version) ThrowVersionChanged();
+            _index = -1;
+            _current = default;
+        }
+
+        /// <summary>Does nothing: the enumerator holds no resources.</summary>
+        public readonly void Dispose() { }
+    }
+
+    /// <summary>
+    /// A read-only, live view of the keys of a <see cref="HeapSpanDictionary{TKey, TValue}"/>.
+    /// </summary>
+    public sealed class KeyCollection : ICollection<TKey>, IReadOnlyCollection<TKey>
+    {
+        private readonly HeapSpanDictionary<TKey, TValue> _dictionary;
+
+        internal KeyCollection(HeapSpanDictionary<TKey, TValue> dictionary) => _dictionary = dictionary;
+
+        /// <summary>Gets the number of keys in the dictionary.</summary>
+        public int Count => _dictionary._count;
+
+        bool ICollection<TKey>.IsReadOnly => true;
+
+        /// <summary>Returns whether the dictionary contains <paramref name="item"/> as a key.</summary>
+        /// <param name="item">The key to locate.</param>
+        public bool Contains(TKey item) => _dictionary.ContainsKey(item);
+
+        /// <summary>Copies the keys to <paramref name="array"/>, starting at <paramref name="arrayIndex"/>.</summary>
+        /// <param name="array">The destination array.</param>
+        /// <param name="arrayIndex">The index in <paramref name="array"/> at which copying begins.</param>
+        public void CopyTo(TKey[] array, int arrayIndex)
         {
             if (array is null) throw new ArgumentNullException(nameof(array));
-            if (arrayIndex < 0 || arrayIndex > array.Length - Dictionary._count)
+            if (arrayIndex < 0 || arrayIndex > array.Length - _dictionary._count)
                 throw new ArgumentOutOfRangeException(nameof(arrayIndex));
 
-            var entries = Dictionary._entries;
+            var entries = _dictionary._entries;
             if (entries is null) return;
             for (int i = 0; i < entries.Length; i++)
             {
                 if (entries[i].State == EntryState.Occupied)
-                    array[arrayIndex++] = Select(ref entries[i]);
+                    array[arrayIndex++] = entries[i].Key;
             }
         }
 
-        public IEnumerator<T> GetEnumerator() => new Enumerator(this);
+        /// <summary>
+        /// Returns a struct enumerator over the keys, so a <c>foreach</c> does not allocate.
+        /// Enumerating through <see cref="IEnumerable{T}"/> boxes it.
+        /// </summary>
+        public Enumerator GetEnumerator() => new(_dictionary);
+
+        IEnumerator<TKey> IEnumerable<TKey>.GetEnumerator() => GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        void ICollection<T>.Add(T item) => ThrowReadOnlyView();
+        void ICollection<TKey>.Add(TKey item) => ThrowReadOnlyView();
 
-        void ICollection<T>.Clear() => ThrowReadOnlyView();
+        void ICollection<TKey>.Clear() => ThrowReadOnlyView();
 
-        bool ICollection<T>.Remove(T item)
+        bool ICollection<TKey>.Remove(TKey item)
         {
             ThrowReadOnlyView();
             return false;
         }
 
-        private sealed class Enumerator : IEnumerator<T>
+        /// <summary>Enumerates the keys of a <see cref="HeapSpanDictionary{TKey, TValue}"/>.</summary>
+        public struct Enumerator : IEnumerator<TKey>
         {
-            private readonly ViewBase<T> _view;
+            private readonly HeapSpanDictionary<TKey, TValue> _dictionary;
             private readonly int _version;
             private int _index;
-            private T _current;
+            private TKey _current;
 
-            public Enumerator(ViewBase<T> view)
+            internal Enumerator(HeapSpanDictionary<TKey, TValue> dictionary)
             {
-                _view = view;
-                _version = view.Dictionary._version;
+                _dictionary = dictionary;
+                _version = dictionary._version;
                 _index = -1;
                 _current = default!;
             }
 
-            public T Current => _current;
+            /// <summary>Gets the key at the current position of the enumerator.</summary>
+            public readonly TKey Current => _current;
 
-            object? IEnumerator.Current => _current;
+            readonly object? IEnumerator.Current => _current;
 
+            /// <summary>Advances the enumerator to the next key.</summary>
+            /// <returns><see langword="true"/> if there is a next key; otherwise, <see langword="false"/>.</returns>
+            /// <exception cref="InvalidOperationException">A key was added, or the dictionary was cleared or disposed, after the enumerator was created.</exception>
             public bool MoveNext()
             {
-                var dictionary = _view.Dictionary;
+                var dictionary = _dictionary;
                 if (_version != dictionary._version) ThrowVersionChanged();
 
                 var entries = dictionary._entries;
-                if (entries is null) return false;
-                while (++_index < entries.Length)
+                if (entries is not null)
                 {
-                    if (entries[_index].State == EntryState.Occupied)
+                    while (++_index < entries.Length)
                     {
-                        _current = _view.Select(ref entries[_index]);
-                        return true;
+                        if (entries[_index].State == EntryState.Occupied)
+                        {
+                            _current = entries[_index].Key;
+                            return true;
+                        }
                     }
                 }
                 _current = default!;
                 return false;
             }
 
+            /// <summary>Sets the enumerator back to its initial position, before the first key.</summary>
+            /// <exception cref="InvalidOperationException">A key was added, or the dictionary was cleared or disposed, after the enumerator was created.</exception>
             public void Reset()
             {
-                if (_version != _view.Dictionary._version) ThrowVersionChanged();
+                if (_version != _dictionary._version) ThrowVersionChanged();
                 _index = -1;
                 _current = default!;
             }
 
-            public void Dispose() { }
+            /// <summary>Does nothing: the enumerator holds no resources.</summary>
+            public readonly void Dispose() { }
         }
     }
 
-    private sealed class KeyCollection : ViewBase<TKey>
+    /// <summary>
+    /// A read-only, live view of the values of a <see cref="HeapSpanDictionary{TKey, TValue}"/>.
+    /// </summary>
+    public sealed class ValueCollection : ICollection<TValue>, IReadOnlyCollection<TValue>
     {
-        public KeyCollection(HeapSpanDictionary<TKey, TValue> dictionary) : base(dictionary) { }
+        private readonly HeapSpanDictionary<TKey, TValue> _dictionary;
 
-        public override bool Contains(TKey item) => Dictionary.ContainsKey(item);
+        internal ValueCollection(HeapSpanDictionary<TKey, TValue> dictionary) => _dictionary = dictionary;
 
-        protected override TKey Select(ref Entry entry) => entry.Key;
-    }
+        /// <summary>Gets the number of values in the dictionary.</summary>
+        public int Count => _dictionary._count;
 
-    private sealed class ValueCollection : ViewBase<TValue>
-    {
-        public ValueCollection(HeapSpanDictionary<TKey, TValue> dictionary) : base(dictionary) { }
+        bool ICollection<TValue>.IsReadOnly => true;
 
-        public override bool Contains(TValue item) => Dictionary.ContainsValue(item);
+        /// <summary>Returns whether the dictionary contains <paramref name="item"/> as a value.</summary>
+        /// <param name="item">The value to locate.</param>
+        public bool Contains(TValue item) => _dictionary.ContainsValue(item);
 
-        protected override TValue Select(ref Entry entry) => entry.Value;
+        /// <summary>Copies the values to <paramref name="array"/>, starting at <paramref name="arrayIndex"/>.</summary>
+        /// <param name="array">The destination array.</param>
+        /// <param name="arrayIndex">The index in <paramref name="array"/> at which copying begins.</param>
+        public void CopyTo(TValue[] array, int arrayIndex)
+        {
+            if (array is null) throw new ArgumentNullException(nameof(array));
+            if (arrayIndex < 0 || arrayIndex > array.Length - _dictionary._count)
+                throw new ArgumentOutOfRangeException(nameof(arrayIndex));
+
+            var entries = _dictionary._entries;
+            if (entries is null) return;
+            for (int i = 0; i < entries.Length; i++)
+            {
+                if (entries[i].State == EntryState.Occupied)
+                    array[arrayIndex++] = entries[i].Value;
+            }
+        }
+
+        /// <summary>
+        /// Returns a struct enumerator over the values, so a <c>foreach</c> does not allocate.
+        /// Enumerating through <see cref="IEnumerable{T}"/> boxes it.
+        /// </summary>
+        public Enumerator GetEnumerator() => new(_dictionary);
+
+        IEnumerator<TValue> IEnumerable<TValue>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        void ICollection<TValue>.Add(TValue item) => ThrowReadOnlyView();
+
+        void ICollection<TValue>.Clear() => ThrowReadOnlyView();
+
+        bool ICollection<TValue>.Remove(TValue item)
+        {
+            ThrowReadOnlyView();
+            return false;
+        }
+
+        /// <summary>Enumerates the values of a <see cref="HeapSpanDictionary{TKey, TValue}"/>.</summary>
+        public struct Enumerator : IEnumerator<TValue>
+        {
+            private readonly HeapSpanDictionary<TKey, TValue> _dictionary;
+            private readonly int _version;
+            private int _index;
+            private TValue _current;
+
+            internal Enumerator(HeapSpanDictionary<TKey, TValue> dictionary)
+            {
+                _dictionary = dictionary;
+                _version = dictionary._version;
+                _index = -1;
+                _current = default!;
+            }
+
+            /// <summary>Gets the value at the current position of the enumerator.</summary>
+            public readonly TValue Current => _current;
+
+            readonly object? IEnumerator.Current => _current;
+
+            /// <summary>Advances the enumerator to the next value.</summary>
+            /// <returns><see langword="true"/> if there is a next value; otherwise, <see langword="false"/>.</returns>
+            /// <exception cref="InvalidOperationException">A key was added, or the dictionary was cleared or disposed, after the enumerator was created.</exception>
+            public bool MoveNext()
+            {
+                var dictionary = _dictionary;
+                if (_version != dictionary._version) ThrowVersionChanged();
+
+                var entries = dictionary._entries;
+                if (entries is not null)
+                {
+                    while (++_index < entries.Length)
+                    {
+                        if (entries[_index].State == EntryState.Occupied)
+                        {
+                            _current = entries[_index].Value;
+                            return true;
+                        }
+                    }
+                }
+                _current = default!;
+                return false;
+            }
+
+            /// <summary>Sets the enumerator back to its initial position, before the first value.</summary>
+            /// <exception cref="InvalidOperationException">A key was added, or the dictionary was cleared or disposed, after the enumerator was created.</exception>
+            public void Reset()
+            {
+                if (_version != _dictionary._version) ThrowVersionChanged();
+                _index = -1;
+                _current = default!;
+            }
+
+            /// <summary>Does nothing: the enumerator holds no resources.</summary>
+            public readonly void Dispose() { }
+        }
     }
 }

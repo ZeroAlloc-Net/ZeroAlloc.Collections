@@ -104,7 +104,7 @@ ring.IsFull;  // true
 
 ## Enumeration
 
-Both variants enumerate in FIFO order (head to tail). The ref struct version uses a zero-allocation `ref struct Enumerator`; the heap version returns `IEnumerator<T>`.
+Both variants enumerate in FIFO order (head to tail). The ref struct version uses a zero-allocation `ref struct Enumerator`; the heap version returns a zero-allocation public struct `Enumerator`.
 
 ```csharp
 using var ring = new RingBuffer<int>(8);
@@ -149,7 +149,7 @@ public double RollingAverage(ReadOnlySpan<double> samples, int windowSize)
 
 `Clear()` resets head, tail, and count to zero and clears references for reference types. The rented buffer is retained.
 
-`Dispose()` returns the rented buffer to the pool.
+`Dispose()` returns the rented buffer to the pool. On `HeapRingBuffer` it also empties the buffer, so `Count` is 0 and a `foreach` yields nothing. It is safe to call more than once.
 
 ## API Reference
 
@@ -183,5 +183,5 @@ public double RollingAverage(ReadOnlySpan<double> samples, int windowSize)
 | Method | `bool TryPeek(out T item)` | Reads the head without removing; returns `false` if empty. |
 | Method | `void Clear()` | Resets head, tail, and count; retains buffer. |
 | Method | `T[] ToArray()` | Copies elements to a new array in FIFO order. |
-| Method | `IEnumerator<T> GetEnumerator()` | Returns an `IEnumerator<T>` (FIFO order). |
-| Method | `void Dispose()` | Returns the rented buffer to the pool. |
+| Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (FIFO order). |
+| Method | `void Dispose()` | Returns the rented buffer to the pool and empties the collection: `Count` is 0 and a `foreach` yields nothing. Safe to call more than once. |

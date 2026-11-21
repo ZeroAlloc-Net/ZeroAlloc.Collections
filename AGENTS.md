@@ -4,19 +4,19 @@ A NuGet library of pooled and stack-only collections (`PooledList<T>`, `RingBuff
 `SpanDictionary<TKey,TValue>`, `PooledStack<T>`, `PooledQueue<T>`, `FixedSizeList<T>`) in two forms each:
 a `ref struct` for synchronous hot paths and a `Heap*` class for fields and async code, plus
 `ConcurrentHeapSpanDictionary`. One package ships: `ZeroAlloc.Collections`, which bundles the source
-generators as an analyzer. Targets `netstandard2.1`, `net8.0`, `net9.0` and `net11.0`.
+generators as an analyzer. Targets `net10.0` and `net11.0`.
 
 ## Layout
 - `src/ZeroAlloc.Collections`: the library. `src/ZeroAlloc.Collections.Generators` is a `netstandard2.0`
   Roslyn generator and analyzer, `IsPackable=false`; it ships only inside the library package.
-- `tests/ZeroAlloc.Collections.Tests` is the xunit suite (targets `net9.0` and `net11.0`).
+- `tests/ZeroAlloc.Collections.Tests` is the xunit suite (targets `net10.0` and `net11.0`).
   `tests/ZeroAlloc.Collections.Benchmarks` is BenchmarkDotNet and is not part of any test run.
 - `samples/ZeroAlloc.Collections.AotSmoke` is a NativeAOT app that CI publishes and runs. It targets
   `net11.0` on purpose, so the publish uses the newest ILCompiler.
 - `docs/` is the documentation site source; `docs/plans` holds design notes.
 
 ## Build and test
-SDK: `global.json` pins 11.0.100 with `rollForward: latestMinor`. Tests need the .NET 9 and .NET 11
+SDK: `global.json` pins 11.0.100 with `rollForward: latestMinor`. Tests need the .NET 10 and .NET 11
 runtimes; the 11.0 SDK supplies the latter.
 
 CI job `build` (`.github/workflows/ci.yml`):
@@ -36,18 +36,17 @@ baseline. CI job `api-compat` runs the shared API compatibility check.
 
 Fast inner loop (run locally, passes):
 - `dotnet build ZeroAlloc.Collections.slnx -c Release`
-- `dotnet test tests/ZeroAlloc.Collections.Tests -c Release --no-build -f net9.0 --filter "FullyQualifiedName~AllocationTests"`
+- `dotnet test tests/ZeroAlloc.Collections.Tests -c Release --no-build -f net10.0 --filter "FullyQualifiedName~AllocationTests"`
 
 Benchmarks run from `benchmarks.yml`, job `full`:
 - `dotnet build tests/ZeroAlloc.Collections.Benchmarks -c Release`
 - `dotnet run --project tests/ZeroAlloc.Collections.Benchmarks -c Release --no-build -- --filter "${FILTER:-*}"`
 
-The benchmark project targets only `net9.0`, not the library's LTS `net8.0`, which the org rule below asks for.
+The benchmark project targets only `net10.0`, the library's LTS target. BenchmarkDotNet has no stable net11 release yet.
 
 ## Conventions and gotchas
 - Warnings are errors (`TreatWarningsAsErrors`, Meziantou.Analyzer, `EnforceCodeStyleInBuild`). Fix the
-  cause; do not add to `NoWarn`. `MA0158` is already off because `System.Threading.Lock` is .NET 9+ and
-  the library targets older frameworks. `MA0048` is off only under `tests/`.
+  cause; do not add to `NoWarn`. `MA0048` is off only under `tests/`.
 - Public API is locked by `Microsoft.CodeAnalysis.PublicApiAnalyzers`: RS0016 and RS0017 are errors.
   Any public addition or removal needs a line in `src/ZeroAlloc.Collections/PublicAPI.Unshipped.txt`.
   Do not edit `PublicAPI.Shipped.txt`; a release PR moves entries there.
@@ -63,7 +62,7 @@ The benchmark project targets only `net9.0`, not the library's LTS `net8.0`, whi
 - `ref struct` collections cannot be class fields or be captured by lambdas. In `async` methods they may
   only be locals that do not live across an `await` (C# 13 and later). Tests that use them stay synchronous. Pooled types rent from `ArrayPool<T>.Shared` and
   must be disposed (diagnostic `ZAC001` flags a missing dispose).
-- The library reports `IsAotCompatible` for `net8.0` and later. No reflection, no runtime code
+- The library reports `IsAotCompatible` on every target. No reflection, no runtime code
   generation. New generator output must also publish cleanly in `AotSmoke`.
 - Packing needs an explicit version: `dotnet pack -c Release -p:Version=X.Y.Z`. `Directory.Build.props`
   fails the pack with ZAVERSION001 or ZAVERSION002 otherwise, and a `--no-build` pack needs the same

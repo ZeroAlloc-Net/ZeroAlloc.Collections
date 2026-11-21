@@ -271,6 +271,52 @@ using (var queue = new HeapPooledQueue<SmokeKey?>(capacity: 2))
     Console.WriteLine("AOT smoke: [ZeroAllocList(typeof(int?))] OK");
 }
 
+// 14. Struct enumerators of every Heap* collection, including HeapSpanDictionary's Keys and Values
+// views and the pooled snapshot of ConcurrentHeapSpanDictionary, over a nullable struct.
+{
+    using var heapList = new HeapPooledList<Guid?>();
+    using var heapStack = new HeapPooledStack<Guid?>();
+    using var heapQueue = new HeapPooledQueue<Guid?>();
+    var heapFixed = new HeapFixedSizeList<Guid?>(capacity: 2);
+    using var heapRing = new HeapRingBuffer<Guid?>(capacity: 2);
+    using var heapDict = new HeapSpanDictionary<int, Guid?>();
+    using var concurrent = new ConcurrentHeapSpanDictionary<int, Guid?>();
+    var id = Guid.NewGuid();
+    foreach (var value in new Guid?[] { id, null })
+    {
+        heapList.Add(value);
+        heapStack.Push(value);
+        heapQueue.Enqueue(value);
+        heapFixed.Add(value);
+        heapRing.TryWrite(value);
+        heapDict.Add(heapDict.Count, value);
+        concurrent.TryAdd(concurrent.Count, value);
+    }
+
+    int seen = 0, nulls = 0;
+    foreach (var v in heapList) { seen++; if (v is null) nulls++; }
+    foreach (var v in heapStack) { seen++; if (v is null) nulls++; }
+    foreach (var v in heapQueue) { seen++; if (v is null) nulls++; }
+    foreach (var v in heapFixed) { seen++; if (v is null) nulls++; }
+    foreach (var v in heapRing) { seen++; if (v is null) nulls++; }
+    foreach (var pair in heapDict) { seen++; if (pair.Value is null) nulls++; }
+    foreach (var v in heapDict.Values) { seen++; if (v is null) nulls++; }
+    int keySum = 0;
+    foreach (var k in heapDict.Keys) keySum += k;
+    foreach (var pair in concurrent) { seen++; if (pair.Value is null) nulls++; }
+    if (seen != 16 || nulls != 8 || keySum != 1)
+        return Fail($"Heap* struct enumerators expected 16 items, 8 nulls and key sum 1, got {seen}, {nulls} and {keySum}");
+    var stackOrder = new List<Guid?>();
+    foreach (var v in heapStack) stackOrder.Add(v);
+    if (stackOrder.Count != 2 || stackOrder[0] is not null || stackOrder[1] != id)
+        return Fail("HeapPooledStack enumeration order is not top to bottom");
+    var queueOrder = new List<Guid?>();
+    foreach (var v in heapQueue) queueOrder.Add(v);
+    if (queueOrder.Count != 2 || queueOrder[0] != id || queueOrder[1] is not null)
+        return Fail("HeapPooledQueue enumeration order is not first in, first out");
+    Console.WriteLine("AOT smoke: Heap* struct enumerators OK");
+}
+
 Console.WriteLine("AOT smoke: PASS");
 return 0;
 

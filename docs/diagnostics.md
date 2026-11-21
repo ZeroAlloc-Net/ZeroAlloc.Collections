@@ -6,7 +6,7 @@ sidebar_position: 8
 
 # Compiler Diagnostics
 
-ZeroAlloc.Collections includes a Roslyn analyzer that detects common mistakes at compile time. Diagnostics appear as warnings in your IDE and on `dotnet build` — you never discover a leaked pool buffer at runtime in production.
+ZeroAlloc.Collections includes a Roslyn analyzer that detects common mistakes at compile time. Diagnostics appear as warnings or errors in your IDE and on `dotnet build` — you never discover a leaked pool buffer at runtime in production.
 
 ## Diagnostic Reference Table
 
@@ -16,9 +16,9 @@ ZeroAlloc.Collections includes a Roslyn analyzer that detects common mistakes at
 | ZAC010 | Warning | ZeroAlloc.Collections.Generators | Ambiguous backing array field |
 | ZAC011 | Warning | ZeroAlloc.Collections.Generators | Ambiguous count field |
 | ZAC012 | Error | ZeroAlloc.Collections.Generators | Field not found |
-| ZAC013 | Warning | ZeroAlloc.Collections.Generators | Nested type inside a containing type that is not partial |
+| ZAC013 | Error | ZeroAlloc.Collections.Generators | Nested type inside a containing type that is not partial |
 
-ZAC001 was in category `Usage` until 1.1.4. ZAC010 to ZAC012 come from the `[ZeroAllocEnumerable]` generator, and ZAC013 from all three generators; see [Source Generators](source-generators.md).
+ZAC001 was in category `Usage` until 1.1.4. ZAC013 was a warning until 2.0.0. ZAC010 to ZAC012 come from the `[ZeroAllocEnumerable]` generator, and ZAC013 from all three generators; see [Source Generators](source-generators.md).
 
 ## ZAC001 — Pooled Collection Should Be Disposed
 
@@ -140,7 +140,9 @@ Or in your `.csproj` for project-wide suppression:
 
 ## ZAC013 — Nested Type Inside a Containing Type That Is Not Partial
 
-**What it means:** A type marked `[ZeroAllocList]`, `[PooledCollection]` or `[ZeroAllocEnumerable]` is nested in another type that is not `partial`. The generated code is placed inside a partial declaration of every containing type, which only a `partial` type allows, so the generator generates nothing for it. None of the generated members exist, and code that uses them fails to compile. The warning names the outermost containing type that is not `partial`.
+**What it means:** A type marked `[ZeroAllocList]`, `[PooledCollection]` or `[ZeroAllocEnumerable]` is nested in another type that is not `partial`. The generated code is placed inside a partial declaration of every containing type, which only a `partial` type allows, so the generator generates nothing for it. None of the generated members exist, and code that uses them fails to compile. The error names the outermost containing type that is not `partial`.
+
+ZAC013 is an error since 2.0.0. It was a warning before, so a build passed while the type it names had none of its generated members; code that used them failed elsewhere, and code that did not use them built with the type silently empty.
 
 Earlier versions generated such a type as a new type at the top of the namespace, which left the nested type just as empty.
 

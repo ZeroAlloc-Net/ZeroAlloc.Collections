@@ -157,13 +157,12 @@ public sealed class HeapPooledStack<T> : IReadOnlyCollection<T>, IDisposable
     }
 
     /// <summary>
-    /// Returns an enumerator that iterates through the stack from top to bottom.
+    /// Returns a struct enumerator that iterates through the stack from top to bottom, so a
+    /// <c>foreach</c> does not allocate. Enumerating through <see cref="IEnumerable{T}"/> boxes it.
     /// </summary>
-    public IEnumerator<T> GetEnumerator()
-    {
-        for (int i = _count - 1; i >= 0; i--)
-            yield return _array![i];
-    }
+    public Enumerator GetEnumerator() => new(this);
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -193,5 +192,58 @@ public sealed class HeapPooledStack<T> : IReadOnlyCollection<T>, IDisposable
         }
 
         _array = newArray;
+    }
+
+    /// <summary>
+    /// Enumerates the elements of a <see cref="HeapPooledStack{T}"/> from top to bottom, starting
+    /// at the element that was on top when the enumerator was created. Elements popped since are
+    /// skipped, and a disposed stack ends the enumeration.
+    /// </summary>
+    public struct Enumerator : IEnumerator<T>
+    {
+        private readonly HeapPooledStack<T> _stack;
+        private int _index;
+        private T _current;
+
+        internal Enumerator(HeapPooledStack<T> stack)
+        {
+            _stack = stack;
+            _index = stack._count;
+            _current = default!;
+        }
+
+        /// <summary>Gets the element at the current position of the enumerator.</summary>
+        public readonly T Current => _current;
+
+        readonly object? IEnumerator.Current => _current;
+
+        /// <summary>Advances the enumerator to the next element, towards the bottom of the stack.</summary>
+        /// <returns><see langword="true"/> if there is a next element; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            // Bounded by the live count, so popping, clearing or disposing the stack during the
+            // enumeration never reads a slot that no longer holds an element.
+            int index = Math.Min(_index, _stack._count) - 1;
+            if (index >= 0)
+            {
+                _index = index;
+                _current = _stack._array![index];
+                return true;
+            }
+            _index = -1;
+            _current = default!;
+            return false;
+        }
+
+        /// <summary>Sets the enumerator back to its initial position, above the current top element.</summary>
+        public void Reset()
+        {
+            _index = _stack._count;
+            _current = default!;
+        }
+
+        /// <summary>Does nothing: the enumerator holds no resources.</summary>
+        public readonly void Dispose() { }
     }
 }

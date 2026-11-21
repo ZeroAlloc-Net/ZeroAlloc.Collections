@@ -120,12 +120,13 @@ public sealed class HeapPooledList<T> : IList<T>, IReadOnlyList<T>, IDisposable
     /// <summary>Returns a read-only span over the active elements.</summary>
     public ReadOnlySpan<T> AsReadOnlySpan() => AsSpan();
 
-    /// <inheritdoc/>
-    public IEnumerator<T> GetEnumerator()
-    {
-        for (int i = 0; i < _count; i++)
-            yield return _array![i];
-    }
+    /// <summary>
+    /// Returns a struct enumerator over the elements in index order, so a <c>foreach</c> does not
+    /// allocate. Enumerating through <see cref="IEnumerable{T}"/> boxes it.
+    /// </summary>
+    public Enumerator GetEnumerator() => new(this);
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -142,14 +143,67 @@ public sealed class HeapPooledList<T> : IList<T>, IReadOnlyList<T>, IDisposable
     }
 
     /// <summary>
-    /// Returns the rented buffer to the pool.
+    /// Returns the rented buffer to the pool and empties the list. Safe to call multiple times.
     /// </summary>
     public void Dispose()
     {
-        if (_array is not null)
+        var array = _array;
+        if (array is not null)
         {
-            _pool.Return(_array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             _array = null;
+            _count = 0;
+            _pool.Return(array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
+    }
+
+    /// <summary>
+    /// Enumerates the elements of a <see cref="HeapPooledList{T}"/> in index order. Each step reads
+    /// the list's current contents.
+    /// </summary>
+    public struct Enumerator : IEnumerator<T>
+    {
+        private readonly HeapPooledList<T> _list;
+        private int _index;
+        private T _current;
+
+        internal Enumerator(HeapPooledList<T> list)
+        {
+            _list = list;
+            _index = -1;
+            _current = default!;
+        }
+
+        /// <summary>Gets the element at the current position of the enumerator.</summary>
+        public readonly T Current => _current;
+
+        readonly object? IEnumerator.Current => _current;
+
+        /// <summary>Advances the enumerator to the next element.</summary>
+        /// <returns><see langword="true"/> if there is a next element; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            var list = _list;
+            int index = _index + 1;
+            if (index < list._count)
+            {
+                _index = index;
+                _current = list._array![index];
+                return true;
+            }
+            _index = list._count;
+            _current = default!;
+            return false;
+        }
+
+        /// <summary>Sets the enumerator back to its initial position, before the first element.</summary>
+        public void Reset()
+        {
+            _index = -1;
+            _current = default!;
+        }
+
+        /// <summary>Does nothing: the enumerator holds no resources.</summary>
+        public readonly void Dispose() { }
     }
 }

@@ -134,31 +134,96 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
         return result;
     }
 
-    /// <summary>Returns an enumerator that iterates through the buffer in FIFO order.</summary>
-    public IEnumerator<T> GetEnumerator()
-    {
-        int count = _count;
-        int head = _head;
-        var array = _array;
-        for (int i = 0, index = head; i < count; i++)
-        {
-            yield return array![index];
-            if (++index == _capacity) index = 0;
-        }
-    }
+    /// <summary>
+    /// Returns a struct enumerator that iterates through the buffer in FIFO order, so a
+    /// <c>foreach</c> does not allocate. Enumerating through <see cref="IEnumerable{T}"/> boxes it.
+    /// </summary>
+    public Enumerator GetEnumerator() => new(this);
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
     /// <inheritdoc />
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
-    /// Returns the rented array to the pool.
+    /// Returns the rented array to the pool and empties the buffer. Safe to call multiple times.
     /// </summary>
     public void Dispose()
     {
-        if (_array is not null)
+        var array = _array;
+        if (array is not null)
         {
-            _pool.Return(_array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             _array = null;
+            _head = 0;
+            _tail = 0;
+            _count = 0;
+            _pool.Return(array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
+    }
+
+    /// <summary>
+    /// Enumerates the elements of a <see cref="HeapRingBuffer{T}"/> in FIFO order. The enumerator
+    /// captures the head and the count when it is created or reset, and reads the slots as they are
+    /// at each step: a read, write or clear during the enumeration shows in the values it yields.
+    /// Disposing the buffer ends the enumeration.
+    /// </summary>
+    public struct Enumerator : IEnumerator<T>
+    {
+        private readonly HeapRingBuffer<T> _buffer;
+        private T[]? _array;
+        private int _count;
+        private int _position;
+        private int _slot;
+        private T _current;
+
+        internal Enumerator(HeapRingBuffer<T> buffer)
+        {
+            _buffer = buffer;
+            _array = buffer._array;
+            _count = buffer._count;
+            _position = -1;
+            _slot = buffer._head;
+            _current = default!;
+        }
+
+        /// <summary>Gets the element at the current position of the enumerator.</summary>
+        public readonly T Current => _current;
+
+        readonly object? IEnumerator.Current => _current;
+
+        /// <summary>Advances the enumerator to the next element.</summary>
+        /// <returns><see langword="true"/> if there is a next element; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            int position = _position + 1;
+            // Dispose returns the captured array to the pool, where another renter may overwrite
+            // it, so a disposed buffer ends the enumeration instead of reading that array.
+            if (position < _count && _buffer._array is not null)
+            {
+                int slot = _slot;
+                if (position > 0 && ++slot == _buffer._capacity) slot = 0;
+                _slot = slot;
+                _position = position;
+                _current = _array![slot];
+                return true;
+            }
+            _position = _count;
+            _current = default!;
+            return false;
+        }
+
+        /// <summary>Sets the enumerator back to its initial position, over the buffer's current contents.</summary>
+        public void Reset()
+        {
+            _array = _buffer._array;
+            _count = _buffer._count;
+            _position = -1;
+            _slot = _buffer._head;
+            _current = default!;
+        }
+
+        /// <summary>Does nothing: the enumerator holds no resources.</summary>
+        public readonly void Dispose() { }
     }
 }

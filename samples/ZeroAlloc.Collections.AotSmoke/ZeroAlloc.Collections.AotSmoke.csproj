@@ -5,7 +5,7 @@
          .NET get. NativeAOT codegen bugs such as dotnet/runtime#134799 live in a specific
          ILCompiler version, and an older smoke never compiles with the newest one. The app
          consumes the lib's net11.0 asset, exactly as a net11 consumer of the package
-         does, so the lib keeps its ns2.1;net8.0;net9.0;net11.0 targets. -->
+         does. The lib also ships a net10.0 asset. -->
     <TargetFramework>net11.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <PublishAot>true</PublishAot>

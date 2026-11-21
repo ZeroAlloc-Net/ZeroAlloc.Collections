@@ -10,7 +10,7 @@ namespace ZeroAlloc.Collections;
 /// A thread-safe, <see cref="ArrayPool{T}"/>-backed hash map. Drop-in replacement for
 /// <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey, TValue}"/> when pooled
 /// bucket storage is wanted. Coarse-locked: every public method acquires a single
-/// <c>lock(_syncRoot)</c> — no lock striping, no lock-free CAS.
+/// <see cref="System.Threading.Lock"/> — no lock striping, no lock-free CAS.
 /// </summary>
 /// <typeparam name="TKey">The type of keys.</typeparam>
 /// <typeparam name="TValue">The type of values.</typeparam>
@@ -44,7 +44,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
         public EntryState State;
     }
 
-    private readonly object _syncRoot = new();
+    private readonly Lock _syncRoot = new();
     private Entry[]? _entries;
     private int _count;
     private readonly IEqualityComparer<TKey> _comparer;
@@ -254,17 +254,22 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
     }
 
     /// <summary>
-    /// Returns an enumerator over a snapshot of the current entries. The snapshot is taken under
-    /// the lock; iteration does not hold the lock and is safe during concurrent writes.
+    /// Returns a struct enumerator over a snapshot of the current entries. The snapshot is taken
+    /// under the lock; iteration does not hold the lock and is safe during concurrent writes.
     /// The snapshot is copied into a buffer rented from <see cref="ArrayPool{T}.Shared"/> and
-    /// returned when the enumerator is disposed, so a <c>foreach</c> allocates only the
-    /// enumerator object.
+    /// returned when the enumerator is disposed, so a <c>foreach</c> does not allocate.
+    /// Enumerating through <see cref="IEnumerable{T}"/> boxes the enumerator.
     /// </summary>
-    public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+    /// <remarks>
+    /// The enumerator owns the rented buffer. Dispose it exactly once, which <c>foreach</c> does,
+    /// and do not copy it: two copies share the buffer, and disposing both returns it to the pool
+    /// twice.
+    /// </remarks>
+    public Enumerator GetEnumerator()
     {
         lock (_syncRoot)
         {
-            if (_entries is null || _count == 0) return new SnapshotEnumerator(null, 0);
+            if (_entries is null || _count == 0) return new Enumerator(null, 0);
             var buffer = ArrayPool<KeyValuePair<TKey, TValue>>.Shared.Rent(_count);
             int i = 0;
             for (int j = 0; j < _entries.Length; j++)
@@ -272,9 +277,11 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
                 if (_entries[j].State == EntryState.Occupied)
                     buffer[i++] = new KeyValuePair<TKey, TValue>(_entries[j].Key, _entries[j].Value);
             }
-            return new SnapshotEnumerator(buffer, i);
+            return new Enumerator(buffer, i);
         }
     }
+
+    IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator() => GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -464,24 +471,36 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
         _pool.Return(oldEntries, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<Entry>());
     }
 
-    private sealed class SnapshotEnumerator : IEnumerator<KeyValuePair<TKey, TValue>>
+    /// <summary>
+    /// Enumerates a snapshot of the key/value pairs of a
+    /// <see cref="ConcurrentHeapSpanDictionary{TKey, TValue}"/>, taken when the enumerator was
+    /// created. The snapshot lives in a buffer rented from <see cref="ArrayPool{T}.Shared"/>, which
+    /// <see cref="Dispose"/> returns.
+    /// </summary>
+    /// <remarks>
+    /// Dispose the enumerator exactly once and do not copy it: copies share the rented buffer.
+    /// </remarks>
+    public struct Enumerator : IEnumerator<KeyValuePair<TKey, TValue>>
     {
         private KeyValuePair<TKey, TValue>[]? _buffer;
         private readonly int _count;
         private int _index;
 
-        public SnapshotEnumerator(KeyValuePair<TKey, TValue>[]? buffer, int count)
+        internal Enumerator(KeyValuePair<TKey, TValue>[]? buffer, int count)
         {
             _buffer = buffer;
             _count = count;
             _index = -1;
         }
 
-        public KeyValuePair<TKey, TValue> Current =>
+        /// <summary>Gets the key/value pair at the current position of the enumerator.</summary>
+        public readonly KeyValuePair<TKey, TValue> Current =>
             _buffer is not null && (uint)_index < (uint)_count ? _buffer[_index] : default;
 
-        object IEnumerator.Current => Current;
+        readonly object IEnumerator.Current => Current;
 
+        /// <summary>Advances the enumerator to the next pair of the snapshot.</summary>
+        /// <returns><see langword="true"/> if there is a next pair; otherwise, <see langword="false"/>.</returns>
         public bool MoveNext()
         {
             if (_buffer is null) return false;
@@ -494,8 +513,10 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
             return false;
         }
 
+        /// <summary>Sets the enumerator back to the start of the same snapshot.</summary>
         public void Reset() => _index = -1;
 
+        /// <summary>Returns the snapshot buffer to the pool. Later calls do nothing.</summary>
         public void Dispose()
         {
             var buffer = _buffer;

@@ -233,7 +233,7 @@ public class NestedTypeTests
 
         var diagnostic = Assert.Single(WithoutUnusedFieldWarnings(result.Diagnostics));
         Assert.Equal("ZAC013", diagnostic.Id);
-        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Equal(
             "'App.Outer.Items' is not generated because its containing type 'App.Outer' is not partial",
             diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture));
@@ -259,6 +259,7 @@ public class NestedTypeTests
 
         var diagnostic = Assert.Single(WithoutUnusedFieldWarnings(result.Diagnostics));
         Assert.Equal("ZAC013", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Equal(
             "'App.Outer.Middle.Items' is not generated because its containing type 'App.Outer' is not partial",
             diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture));

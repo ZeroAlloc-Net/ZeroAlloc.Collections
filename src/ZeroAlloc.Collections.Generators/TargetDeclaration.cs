@@ -38,7 +38,7 @@ internal readonly record struct TargetDeclaration(
         title: "Nested type inside a containing type that is not partial",
         messageFormat: "'{0}' is not generated because its containing type '{1}' is not partial",
         category: "ZeroAlloc.Collections.Generators",
-        defaultSeverity: DiagnosticSeverity.Warning,
+        defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
     public static TargetDeclaration From(INamedTypeSymbol type, SyntaxNode node)

@@ -77,7 +77,7 @@ stack.TryPop(out item);          // false — stack is empty
 
 ### Enumeration and ToArray
 
-The ref struct variant provides a `ref struct Enumerator` that iterates **top-to-bottom** and returns `ref readonly T Current`. The class variant returns `IEnumerator<T>` in the same order.
+The ref struct variant provides a `ref struct Enumerator` that iterates **top-to-bottom** and returns `ref readonly T Current`. The class variant returns a public struct `Enumerator` in the same order, so its `foreach` does not allocate either.
 
 `ToArray()` returns a new array in **top-first** order (the same order as enumeration).
 
@@ -166,7 +166,7 @@ Enqueue(F) triggers grow:
 
 ### Enumeration and ToArray
 
-Both variants enumerate in **FIFO order** (head to tail). The ref struct variant uses a zero-allocation `ref struct Enumerator`; the class variant returns `IEnumerator<T>`.
+Both variants enumerate in **FIFO order** (head to tail). The ref struct variant uses a zero-allocation `ref struct Enumerator`; the class variant returns a zero-allocation public struct `Enumerator`.
 
 `ToArray()` returns a new array in FIFO order.
 
@@ -189,7 +189,7 @@ int[] arr = queue.ToArray(); // [10, 20, 30]
 Both stack and queue follow the same conventions:
 
 - `Clear()` resets count (and head/tail for queue) to zero, clears references for reference types, and retains the rented buffer.
-- `Dispose()` returns the rented buffer to the pool. Safe to call multiple times.
+- `Dispose()` returns the rented buffer to the pool. Safe to call multiple times. `HeapPooledStack` and `HeapPooledQueue` also empty the collection on `Dispose()`: `Count` is 0 and a `foreach` yields nothing.
 
 ---
 
@@ -271,8 +271,8 @@ public void BreadthFirst(TreeNode root, Action<TreeNode> visit)
 | Method | `bool TryPeek(out T item)` | Reads the top item without removing; returns `false` if empty. |
 | Method | `void Clear()` | Resets count to zero; retains buffer. |
 | Method | `T[] ToArray()` | New array in top-first order. |
-| Method | `IEnumerator<T> GetEnumerator()` | Returns an `IEnumerator<T>` (top-to-bottom). |
-| Method | `void Dispose()` | Returns the rented buffer to the pool. |
+| Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (top-to-bottom). |
+| Method | `void Dispose()` | Returns the rented buffer to the pool and empties the collection: `Count` is 0 and a `foreach` yields nothing. Safe to call more than once. |
 
 ### PooledQueue&lt;T&gt; (ref struct)
 
@@ -305,5 +305,5 @@ public void BreadthFirst(TreeNode root, Action<TreeNode> visit)
 | Method | `bool TryPeek(out T item)` | Reads the head without removing; returns `false` if empty. |
 | Method | `void Clear()` | Resets head, tail, and count; retains buffer. |
 | Method | `T[] ToArray()` | New array in FIFO order. |
-| Method | `IEnumerator<T> GetEnumerator()` | Returns an `IEnumerator<T>` (FIFO order). |
-| Method | `void Dispose()` | Returns the rented buffer to the pool. |
+| Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (FIFO order). |
+| Method | `void Dispose()` | Returns the rented buffer to the pool and empties the collection: `Count` is 0 and a `foreach` yields nothing. Safe to call more than once. |

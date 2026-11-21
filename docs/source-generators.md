@@ -194,7 +194,7 @@ All three generators reopen the attributed type itself, wherever it is declared:
 
 - **Global namespace or any namespace.**
 - **Generic types**, such as `partial struct IntList<TTag>`. The generated code is written with the type's type parameter names. Constraints are not repeated, which a partial declaration allows. For `[ZeroAllocEnumerable]`, the backing array may use one of the type's own type parameters, as in `private T[] _items;`.
-- **Nested types.** The generated code is placed inside a partial declaration of every containing type, outermost first, so **every containing type must be `partial`** too. When one is not, the generator reports [ZAC013](diagnostics.md) and generates nothing for that type.
+- **Nested types.** The generated code is placed inside a partial declaration of every containing type, outermost first, so **every containing type must be `partial`** too. When one is not, the generator reports the error [ZAC013](diagnostics.md) and generates nothing for that type.
 - **Records and ref structs.** A `record`, `record struct` or `ref struct` target is reopened with its own kind.
 - **Any accessibility.** The generated declaration repeats the declared accessibility, including `protected`, `protected internal` and `private protected` on nested types.
 
@@ -218,7 +218,7 @@ Because the pipeline is incremental, the generator only re-runs when the annotat
 
 ### TFM Awareness
 
-The generated code compiles on every target the library supports: `netstandard2.1`, `net8.0`, `net9.0`, and `net11.0`. The generators emit the same source on every target; they do not add `allows ref struct` constraints.
+The generated code compiles on every target the library supports: `net10.0` and `net11.0`. The generators emit the same source on every target; they do not add `allows ref struct` constraints.
 
 ### Generated File Naming
 

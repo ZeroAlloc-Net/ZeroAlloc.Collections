@@ -67,7 +67,7 @@ Console.WriteLine($"{basket.Count} items, {total}"); // 3 items, 1.75
 - **`Span<T>` access** to the list and stack contents for zero-copy loops.
 - **Source generators** that emit type-specific collections from `[ZeroAllocList(typeof(T))]`.
   See [source generators](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/source-generators.md).
-- Targets `netstandard2.1`, `net8.0`, `net9.0` and `net11.0`.
+- Targets `net10.0` and `net11.0`.
 
 ## Performance
 
@@ -80,7 +80,7 @@ BenchmarkDotNet, N = 1,000. Time is the same-run ratio against the BCL type; all
 | Enqueue and dequeue N items | `Queue<int>` | 0.79× | 8,432 B | 0 B |
 | Write and read N items, capacity known | `Queue<int>` | 0.47× | 4,064 B | 0 B |
 
-The `Heap*` classes allocate one enumerator per `foreach`. Every workload, with the full numbers: [docs/performance.md](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md).
+The `Heap*` classes enumerate with public struct enumerators, so their `foreach` allocates nothing either. Every workload, with the full numbers: [docs/performance.md](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md).
 
 ## Learn more
 

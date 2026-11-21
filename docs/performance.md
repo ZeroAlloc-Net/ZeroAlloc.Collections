@@ -64,16 +64,9 @@ foreach (ref readonly var item in list)
 
 The `ref readonly` return also means no defensive copy for large value types.
 
-The `Heap*` classes are different. Their `GetEnumerator()` returns `IEnumerator<T>`, so every `foreach` allocates one enumerator object. Struct enumerators need a public return-type change and are planned for the next major in [#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152). Measured per `foreach` with N = 100, x64:
+The `Heap*` classes cannot use `ref struct` enumerators, because they implement `IEnumerable<T>`. Since 2.0.0 their `GetEnumerator()` returns a public struct `Enumerator` instead, as `List<T>` does, so a `foreach` over `HeapPooledList<T>`, `HeapPooledQueue<T>`, `HeapPooledStack<T>`, `HeapFixedSizeList<T>`, `HeapRingBuffer<T>`, `HeapSpanDictionary<TKey, TValue>` or `ConcurrentHeapSpanDictionary<TKey, TValue>` allocates nothing. The same holds for a `foreach` over `HeapSpanDictionary.Keys` and `.Values`, which return `KeyCollection` and `ValueCollection` with struct enumerators of their own. `ConcurrentHeapSpanDictionary` copies its snapshot into a buffer rented from `ArrayPool<T>.Shared` that the enumerator returns on `Dispose`; when the pool has no buffer of that size yet, as on the first enumeration, the rent allocates one, and later enumerations reuse it. Enumerating any of them through `IEnumerable<T>`, for example with LINQ, boxes the enumerator. In 1.x each `foreach` allocated a 32 to 56 B enumerator object.
 
-| Collection | Allocated per `foreach` |
-|---|---:|
-| `HeapPooledList<T>`, `HeapPooledQueue<T>`, `HeapPooledStack<T>`, `HeapFixedSizeList<T>` | 40 B |
-| `HeapRingBuffer<T>` | 56 B |
-| `HeapSpanDictionary<TKey, TValue>`, and its `Keys` or `Values` | 40 B |
-| `ConcurrentHeapSpanDictionary<TKey, TValue>` | 32 B; the snapshot lives in a pooled buffer |
-
-Reading `HeapSpanDictionary.Keys` or `.Values`, and calling `Count` or `Contains` on them, allocates nothing: the views are created once and cached. To iterate a `Heap*` list without allocating, use `AsSpan()` where the type has it.
+Reading `HeapSpanDictionary.Keys` or `.Values`, and calling `Count` or `Contains` on them, allocates nothing: the views are created once and cached.
 
 ### 4. Open-Addressing Hash Map
 
@@ -92,6 +85,10 @@ BenchmarkDotNet v0.15.8, Windows 11 (10.0.26300.9711)
 ```
 
 > Allocations are exact. Speed is shown as same-run ratios; absolute timings are not published.
+
+> The concurrent fill, fixed-capacity and `Heap*` `foreach` tables were measured again for 2.0.0,
+> on .NET 10 on a GitHub-hosted runner, as each of them says. The other tables are from the
+> 2026-10-17 run described here, on .NET 9.
 
 Each benchmark ran out of process in three launches of 6 warmup and 15 measured iterations, pinned
 to two performance cores. `Ratio` is each row's mean time relative to the BCL baseline in the same
@@ -154,12 +151,15 @@ Ratios against `Dictionary<string,int>` add-then-lookup in the same run.
 
 ### Concurrent fill, N entries
 
-| N | `ConcurrentDictionary` | `Dictionary` + `lock` | `ConcurrentHeapSpanDictionary` | Launch range | BCL alloc | `Dictionary` + `lock` alloc | ZA alloc |
-|------:|---:|---:|---:|---:|---:|---:|---:|
-| 100 | 1.00 | 0.55 | 0.55 | 0.55–0.55 | 12,432 B | 7,416 B | 112 B |
-| 1,000 | 1.00 | 0.52 | 0.51 | 0.50–0.52 | 138,032 B | 73,192 B | 112 B |
+Measured 2026-11-21 on .NET 10.0.15 with the `ShortRun` job on a GitHub-hosted runner, AMD EPYC 9V45,
+after the 2.0.0 changes; one launch, so no launch range.
 
-> The 112 B is the `ConcurrentHeapSpanDictionary` object itself; its storage is pooled.
+| N | `ConcurrentDictionary` | `Dictionary` + `Lock` | `ConcurrentHeapSpanDictionary` | BCL alloc | `Dictionary` + `Lock` alloc | ZA alloc |
+|------:|---:|---:|---:|---:|---:|---:|
+| 100 | 1.00 | 0.63 | 0.61 | 12,744 B | 7,352 B | 96 B |
+| 1,000 | 1.00 | 0.58 | 0.51 | 141,032 B | 73,128 B | 96 B |
+
+> The 96 B is the `ConcurrentHeapSpanDictionary` object and its `System.Threading.Lock`; its storage is pooled, and the `foreach` over it reuses a pooled snapshot buffer, so it allocates nothing once the pool holds one.
 
 ### Write/read N items, capacity known up front
 
@@ -172,33 +172,39 @@ Ratios against `Dictionary<string,int>` add-then-lookup in the same run.
 
 ### Add + enumerate N items, fixed capacity
 
+Measured 2026-11-21 on .NET 10.0.15 with the `ShortRun` job on a GitHub-hosted runner, AMD EPYC 9V74,
+after the 2.0.0 changes; one launch.
+
 | N | `List<int>`, pre-sized | `FixedSizeList<int>` (stackalloc) | `HeapFixedSizeList<int>` | BCL alloc | `FixedSizeList` alloc | `HeapFixedSizeList` alloc |
 |------:|---:|---:|---:|---:|---:|---:|
-| 100 | 1.00 | 0.88 | 1.42 | 456 B | 0 B | 496 B |
-| 1,000 | 1.00 | 0.83 | 1.49 | 4,056 B | 0 B | 4,096 B |
+| 100 | 1.00 | 0.75 | 0.81 | 456 B | 0 B | 424 B |
+| 1,000 | 1.00 | 0.75 | 0.93 | 4,056 B | 0 B | 4,024 B |
 
-> `HeapFixedSizeList` allocates a plain `T[]`, not a pooled buffer, plus one enumerator per `foreach`.
+> `HeapFixedSizeList` allocates a plain `T[]`, not a pooled buffer; its `foreach` allocates nothing. In this run .NET 10 also kept the short-lived list object itself off the heap, so only the array shows.
 
 ### `foreach` over the `Heap*` classes, N = 100
 
-Ratios against `foreach` over a `List<int>` in the same run.
+Ratios against `foreach` over a `List<int>` in the same run. Measured 2026-11-21 on .NET 10.0.15 with
+the `ShortRun` job on a GitHub-hosted runner, AMD EPYC 9V45, after the 2.0.0 changes; one launch. Short
+runs on shared runners are noisy: in an earlier run of the same job, `HeapRingBuffer<int>` read 1.36
+instead of 2.42. The allocations are exact.
 
-| Collection | Ratio | Launch range | Allocated |
-|---|---:|---:|---:|
-| `List<int>` | 1.00 | | 0 B |
-| `HeapPooledList<int>` | 2.24 | 2.18–2.27 | 40 B |
-| `HeapPooledQueue<int>` | 2.67 | 2.66–2.67 | 40 B |
-| `HeapPooledStack<int>` | 2.21 | 2.18–2.27 | 40 B |
-| `HeapRingBuffer<int>` | 2.48 | 2.47–2.48 | 56 B |
-| `HeapFixedSizeList<int>` | 2.26 | 2.26–2.27 | 40 B |
-| `HeapSpanDictionary<int, int>` | 17.08 | 17.07–17.08 | 40 B |
-| `HeapSpanDictionary<int, int>.Keys` | 9.24 | 9.23–9.25 | 40 B |
-| `HeapSpanDictionary<int, int>.Keys.Count` | 0.01 | 0.01–0.01 | 0 B |
-| `ConcurrentHeapSpanDictionary<int, int>` | 7.47 | 7.32–7.57 | 32 B |
+| Collection | Ratio | Allocated |
+|---|---:|---:|
+| `List<int>` | 1.00 | 0 B |
+| `HeapPooledList<int>` | 0.98 | 0 B |
+| `HeapPooledQueue<int>` | 1.32 | 0 B |
+| `HeapPooledStack<int>` | 1.11 | 0 B |
+| `HeapRingBuffer<int>` | 2.42 | 0 B |
+| `HeapFixedSizeList<int>` | 0.98 | 0 B |
+| `HeapSpanDictionary<int, int>` | 4.84 | 0 B |
+| `HeapSpanDictionary<int, int>.Keys` | 6.27 | 0 B |
+| `HeapSpanDictionary<int, int>.Keys.Count` | 0.02 | 0 B |
+| `ConcurrentHeapSpanDictionary<int, int>` | 8.38 | 0 B |
 
-> These go through the `IEnumerator<T>` that `GetEnumerator()` returns; struct enumerators are planned in [#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152).
+> In 1.x, measured on .NET 9, these allocated 32 to 56 B per `foreach` and the lists ran at about 2.2 times `List<int>`. The dictionaries scan every slot of their open-addressing table, and `ConcurrentHeapSpanDictionary` also copies a snapshot under its lock. The 0 B in its row holds once the pool supplies the snapshot buffer.
 
-The key metric is the **ZA alloc** column. The `ref struct` collections target 0 B allocated on all paths except initial pool rent and `ToArray()`. The `Heap*` collections additionally allocate the collection object itself and one enumerator per `foreach`, as listed in [Zero-Allocation Enumerators](#3-zero-allocation-enumerators).
+The key metric is the **ZA alloc** column. The `ref struct` collections target 0 B allocated on all paths except initial pool rent and `ToArray()`. The `Heap*` collections additionally allocate the collection object itself; their `foreach` allocates nothing, as described in [Zero-Allocation Enumerators](#3-zero-allocation-enumerators), except that `ConcurrentHeapSpanDictionary` allocates its snapshot buffer when the pool has none to lend.
 
 ## When Zero Allocation Matters
 
@@ -223,7 +229,7 @@ If your profiler or allocation tracker does not show collection operations as a 
 
 1. **Pre-size your collections** — pass a `capacity` parameter to the constructor. This avoids grow operations entirely when you know the approximate size.
 
-2. **Use `ref struct` variants on hot paths** — they enforce stack-only lifetime and produce zero-alloc enumerators. Reserve `Heap*` variants for async code and long-lived storage; their `foreach` allocates 32-56 B until [#152](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/issues/152).
+2. **Use `ref struct` variants on hot paths** — they enforce stack-only lifetime and produce zero-alloc enumerators. Reserve `Heap*` variants for async code and long-lived storage; their struct enumerators make `foreach` allocation-free too, as long as you do not enumerate them through `IEnumerable<T>`. For `ConcurrentHeapSpanDictionary` that also needs the array pool to supply the snapshot buffer.
 
 3. **Use `AsSpan()` instead of enumeration for bulk processing** — span-based iteration is faster than enumerator-based iteration because there is no `MoveNext()` / `Current` overhead.
 
