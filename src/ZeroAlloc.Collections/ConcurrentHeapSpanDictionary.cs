@@ -10,7 +10,7 @@ namespace ZeroAlloc.Collections;
 /// A thread-safe, <see cref="ArrayPool{T}"/>-backed hash map. Drop-in replacement for
 /// <see cref="System.Collections.Concurrent.ConcurrentDictionary{TKey, TValue}"/> when pooled
 /// bucket storage is wanted. Coarse-locked: every public method acquires a single
-/// <c>lock(_syncRoot)</c> — no lock striping, no lock-free CAS.
+/// <see cref="System.Threading.Lock"/> — no lock striping, no lock-free CAS.
 /// </summary>
 /// <typeparam name="TKey">The type of keys.</typeparam>
 /// <typeparam name="TValue">The type of values.</typeparam>
@@ -44,7 +44,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
         public EntryState State;
     }
 
-    private readonly object _syncRoot = new();
+    private readonly Lock _syncRoot = new();
     private Entry[]? _entries;
     private int _count;
     private readonly IEqualityComparer<TKey> _comparer;

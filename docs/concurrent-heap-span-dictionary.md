@@ -62,7 +62,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
 
 ## Concurrency model
 
-A single `lock(_syncRoot)` guards every public method. Not striped, not lock-free.
+A single `System.Threading.Lock` guards every public method. Not striped, not lock-free.
 
 Why: the value proposition is pooled bucket allocation, not beating `ConcurrentDictionary` on throughput. A coarse lock is provably correct, reuses the single-threaded `HeapSpanDictionary` logic 1:1, and keeps the implementation simple. If a future consumer profiles contention as the bottleneck, a separate `StripedConcurrentHeapSpanDictionary` (or lock-free variant) can ship alongside.
 

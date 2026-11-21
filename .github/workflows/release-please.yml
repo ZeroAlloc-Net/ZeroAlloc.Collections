@@ -85,9 +85,7 @@ jobs:
       version: ${{ needs.release-please.outputs.version }}
       solution: ZeroAlloc.Collections.slnx
       # Runtimes the tests target, besides the SDK global.json pins.
-      dotnet-version: |
-        8.0.x
-        9.0.x
+      dotnet-version: 10.0.x
       # This repository does not publish to GitHub Packages
       # and attaches its packages to the GitHub release.
       github-packages: false
@@ -134,9 +132,7 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: 10.0.x
 
       - name: Build the release
         run: dotnet build ZeroAlloc.Collections.slnx --configuration Release

@@ -52,7 +52,7 @@ public class DictionaryBenchmarks
     public int DictionaryPlusLock_Fill()
     {
         var dict = new Dictionary<int, int>();
-        var sync = new object();
+        var sync = new Lock();
         for (int i = 0; i < N; i++) lock (sync) dict[i] = i * 10;
         int sum = 0;
         lock (sync) foreach (var kv in dict) sum += kv.Value;
