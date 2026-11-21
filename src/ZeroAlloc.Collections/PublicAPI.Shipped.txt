@@ -8,6 +8,13 @@ ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.ConcurrentHeapS
 ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.ContainsKey(TKey key) -> bool
 ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Count.get -> int
 ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Dispose() -> void
+ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Enumerator
+ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Enumerator.Current.get -> System.Collections.Generic.KeyValuePair<TKey, TValue>
+ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Enumerator.Reset() -> void
+ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.GetEnumerator() -> ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.Enumerator
 ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.GetOrAdd(TKey key, System.Func<TKey, TValue>! valueFactory) -> TValue
 ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.GetOrAdd(TKey key, TValue value) -> TValue
 ZeroAlloc.Collections.ConcurrentHeapSpanDictionary<TKey, TValue>.IsEmpty.get -> bool
@@ -44,6 +51,13 @@ ZeroAlloc.Collections.HeapFixedSizeList<T>.Clear() -> void
 ZeroAlloc.Collections.HeapFixedSizeList<T>.Contains(T item) -> bool
 ZeroAlloc.Collections.HeapFixedSizeList<T>.CopyTo(T[]! array, int arrayIndex) -> void
 ZeroAlloc.Collections.HeapFixedSizeList<T>.Count.get -> int
+ZeroAlloc.Collections.HeapFixedSizeList<T>.Enumerator
+ZeroAlloc.Collections.HeapFixedSizeList<T>.Enumerator.Current.get -> T
+ZeroAlloc.Collections.HeapFixedSizeList<T>.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapFixedSizeList<T>.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapFixedSizeList<T>.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapFixedSizeList<T>.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapFixedSizeList<T>.GetEnumerator() -> ZeroAlloc.Collections.HeapFixedSizeList<T>.Enumerator
 ZeroAlloc.Collections.HeapFixedSizeList<T>.HeapFixedSizeList(int capacity) -> void
 ZeroAlloc.Collections.HeapFixedSizeList<T>.IndexOf(T item) -> int
 ZeroAlloc.Collections.HeapFixedSizeList<T>.Insert(int index, T item) -> void
@@ -64,6 +78,13 @@ ZeroAlloc.Collections.HeapPooledList<T>.Contains(T item) -> bool
 ZeroAlloc.Collections.HeapPooledList<T>.CopyTo(T[]! array, int arrayIndex) -> void
 ZeroAlloc.Collections.HeapPooledList<T>.Count.get -> int
 ZeroAlloc.Collections.HeapPooledList<T>.Dispose() -> void
+ZeroAlloc.Collections.HeapPooledList<T>.Enumerator
+ZeroAlloc.Collections.HeapPooledList<T>.Enumerator.Current.get -> T
+ZeroAlloc.Collections.HeapPooledList<T>.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapPooledList<T>.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapPooledList<T>.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapPooledList<T>.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapPooledList<T>.GetEnumerator() -> ZeroAlloc.Collections.HeapPooledList<T>.Enumerator
 ZeroAlloc.Collections.HeapPooledList<T>.HeapPooledList() -> void
 ZeroAlloc.Collections.HeapPooledList<T>.HeapPooledList(int capacity) -> void
 ZeroAlloc.Collections.HeapPooledList<T>.HeapPooledList(int capacity, System.Buffers.ArrayPool<T>! pool) -> void
@@ -80,6 +101,13 @@ ZeroAlloc.Collections.HeapPooledQueue<T>.Clear() -> void
 ZeroAlloc.Collections.HeapPooledQueue<T>.Count.get -> int
 ZeroAlloc.Collections.HeapPooledQueue<T>.Dispose() -> void
 ZeroAlloc.Collections.HeapPooledQueue<T>.Enqueue(T item) -> void
+ZeroAlloc.Collections.HeapPooledQueue<T>.Enumerator
+ZeroAlloc.Collections.HeapPooledQueue<T>.Enumerator.Current.get -> T
+ZeroAlloc.Collections.HeapPooledQueue<T>.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapPooledQueue<T>.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapPooledQueue<T>.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapPooledQueue<T>.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapPooledQueue<T>.GetEnumerator() -> ZeroAlloc.Collections.HeapPooledQueue<T>.Enumerator
 ZeroAlloc.Collections.HeapPooledQueue<T>.HeapPooledQueue() -> void
 ZeroAlloc.Collections.HeapPooledQueue<T>.HeapPooledQueue(int capacity) -> void
 ZeroAlloc.Collections.HeapPooledQueue<T>.HeapPooledQueue(int capacity, System.Buffers.ArrayPool<T>! pool) -> void
@@ -91,6 +119,13 @@ ZeroAlloc.Collections.HeapPooledStack<T>
 ZeroAlloc.Collections.HeapPooledStack<T>.Clear() -> void
 ZeroAlloc.Collections.HeapPooledStack<T>.Count.get -> int
 ZeroAlloc.Collections.HeapPooledStack<T>.Dispose() -> void
+ZeroAlloc.Collections.HeapPooledStack<T>.Enumerator
+ZeroAlloc.Collections.HeapPooledStack<T>.Enumerator.Current.get -> T
+ZeroAlloc.Collections.HeapPooledStack<T>.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapPooledStack<T>.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapPooledStack<T>.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapPooledStack<T>.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapPooledStack<T>.GetEnumerator() -> ZeroAlloc.Collections.HeapPooledStack<T>.Enumerator
 ZeroAlloc.Collections.HeapPooledStack<T>.HeapPooledStack() -> void
 ZeroAlloc.Collections.HeapPooledStack<T>.HeapPooledStack(int capacity) -> void
 ZeroAlloc.Collections.HeapPooledStack<T>.HeapPooledStack(int capacity, System.Buffers.ArrayPool<T>! pool) -> void
@@ -103,6 +138,13 @@ ZeroAlloc.Collections.HeapRingBuffer<T>
 ZeroAlloc.Collections.HeapRingBuffer<T>.Clear() -> void
 ZeroAlloc.Collections.HeapRingBuffer<T>.Count.get -> int
 ZeroAlloc.Collections.HeapRingBuffer<T>.Dispose() -> void
+ZeroAlloc.Collections.HeapRingBuffer<T>.Enumerator
+ZeroAlloc.Collections.HeapRingBuffer<T>.Enumerator.Current.get -> T
+ZeroAlloc.Collections.HeapRingBuffer<T>.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapRingBuffer<T>.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapRingBuffer<T>.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapRingBuffer<T>.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapRingBuffer<T>.GetEnumerator() -> ZeroAlloc.Collections.HeapRingBuffer<T>.Enumerator
 ZeroAlloc.Collections.HeapRingBuffer<T>.HeapRingBuffer(int capacity) -> void
 ZeroAlloc.Collections.HeapRingBuffer<T>.HeapRingBuffer(int capacity, System.Buffers.ArrayPool<T>! pool) -> void
 ZeroAlloc.Collections.HeapRingBuffer<T>.IsEmpty.get -> bool
@@ -120,14 +162,45 @@ ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ContainsKey(TKey key) -> 
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.CopyTo(System.Collections.Generic.KeyValuePair<TKey, TValue>[]! array, int arrayIndex) -> void
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Count.get -> int
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Dispose() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Enumerator
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Enumerator.Current.get -> System.Collections.Generic.KeyValuePair<TKey, TValue>
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.GetEnumerator() -> ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Enumerator
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.HeapSpanDictionary() -> void
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.HeapSpanDictionary(int capacity) -> void
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.IsReadOnly.get -> bool
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Contains(TKey item) -> bool
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.CopyTo(TKey[]! array, int arrayIndex) -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Count.get -> int
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Enumerator
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Enumerator.Current.get -> TKey
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.GetEnumerator() -> ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection.Enumerator
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Keys.get -> ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.KeyCollection!
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Remove(System.Collections.Generic.KeyValuePair<TKey, TValue> item) -> bool
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Remove(TKey key) -> bool
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.this[TKey key].get -> TValue
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.this[TKey key].set -> void
 ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.TryGetValue(TKey key, out TValue value) -> bool
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Contains(TValue item) -> bool
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.CopyTo(TValue[]! array, int arrayIndex) -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Count.get -> int
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Enumerator
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Enumerator.Current.get -> TValue
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Enumerator.Dispose() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Enumerator.Enumerator() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Enumerator.MoveNext() -> bool
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Enumerator.Reset() -> void
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.GetEnumerator() -> ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection.Enumerator
+ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.Values.get -> ZeroAlloc.Collections.HeapSpanDictionary<TKey, TValue>.ValueCollection!
 ZeroAlloc.Collections.PooledCollectionAttribute
 ZeroAlloc.Collections.PooledCollectionAttribute.ElementType.get -> System.Type!
 ZeroAlloc.Collections.PooledCollectionAttribute.PooledCollectionAttribute(System.Type! elementType) -> void
