@@ -146,37 +146,95 @@ public class AllocationTests
         }, "HeapSpanDictionary Keys and Values access");
     }
 
+    // The Heap* collections return public struct enumerators (#152), so a foreach over the
+    // collection itself, or over HeapSpanDictionary's Keys and Values, allocates nothing.
+
     [Fact]
-    public void HeapSpanDictionary_ForeachOverKeys_AllocatesOneEnumerator()
+    public void HeapPooledList_Foreach_AllocatesNothing()
+    {
+        using var list = new HeapPooledList<int>(16);
+        for (int i = 0; i < 16; i++) list.Add(i);
+        AllocationGate.AssertBudget(0, Runs, () =>
+        {
+            int sum = 0;
+            foreach (var item in list) sum += item;
+            _sink = sum;
+        }, "HeapPooledList foreach");
+    }
+
+    [Fact]
+    public void HeapFixedSizeList_Foreach_AllocatesNothing()
+    {
+        var list = new HeapFixedSizeList<int>(16);
+        for (int i = 0; i < 16; i++) list.Add(i);
+        AllocationGate.AssertBudget(0, Runs, () =>
+        {
+            int sum = 0;
+            foreach (var item in list) sum += item;
+            _sink = sum;
+        }, "HeapFixedSizeList foreach");
+    }
+
+    [Fact]
+    public void HeapPooledQueueAndStack_Foreach_AllocatesNothing()
+    {
+        using var queue = new HeapPooledQueue<int>(16);
+        using var stack = new HeapPooledStack<int>(16);
+        for (int i = 0; i < 16; i++)
+        {
+            queue.Enqueue(i);
+            stack.Push(i);
+        }
+        AllocationGate.AssertBudget(0, Runs, () =>
+        {
+            int sum = 0;
+            foreach (var item in queue) sum += item;
+            foreach (var item in stack) sum += item;
+            _sink = sum;
+        }, "HeapPooledQueue and HeapPooledStack foreach");
+    }
+
+    [Fact]
+    public void HeapRingBuffer_Foreach_AllocatesNothing()
+    {
+        using var ring = new HeapRingBuffer<int>(16);
+        for (int i = 0; i < 16; i++) ring.TryWrite(i);
+        AllocationGate.AssertBudget(0, Runs, () =>
+        {
+            int sum = 0;
+            foreach (var item in ring) sum += item;
+            _sink = sum;
+        }, "HeapRingBuffer foreach");
+    }
+
+    [Fact]
+    public void HeapSpanDictionary_ForeachOverPairsKeysAndValues_AllocatesNothing()
     {
         using var dict = new HeapSpanDictionary<int, int>();
         for (int i = 0; i < 8; i++) dict[i] = i;
-        // ICollection<TKey> forces a heap enumerator until the next major, see issue #152.
-        // Exactly one Keys enumerator: 40 B on x64, the figure docs/performance.md lists.
-        long bytes = AllocationGate.MeasureBytesPerCall(Runs, () =>
+        AllocationGate.AssertBudget(0, Runs, () =>
         {
             int sum = 0;
+            foreach (var pair in dict) sum += pair.Value;
             foreach (var key in dict.Keys) sum += key;
+            foreach (var value in dict.Values) sum += value;
             _sink = sum;
-        });
-        Assert.Equal(40, bytes);
+        }, "HeapSpanDictionary foreach over pairs, Keys and Values");
     }
 
     [Theory]
     [InlineData(8)]
     [InlineData(1000)]
-    public void ConcurrentHeapSpanDictionary_Foreach_AllocatesOnlyTheEnumerator(int count)
+    public void ConcurrentHeapSpanDictionary_Foreach_AllocatesNothing(int count)
     {
         using var dict = new ConcurrentHeapSpanDictionary<int, int>();
         for (int i = 0; i < count; i++) dict.TryAdd(i, i);
-        // The snapshot lives in a pooled buffer; only the enumerator object is allocated.
-        // Exactly one enumerator: 32 B on x64 whatever the entry count, as docs/performance.md lists.
-        long bytes = AllocationGate.MeasureBytesPerCall(Runs, () =>
+        // The snapshot lives in a pooled buffer that the struct enumerator returns on Dispose.
+        AllocationGate.AssertBudget(0, Runs, () =>
         {
             int sum = 0;
             foreach (var kv in dict) sum += kv.Value;
             _sink = sum;
-        });
-        Assert.Equal(32, bytes);
+        }, "ConcurrentHeapSpanDictionary foreach");
     }
 }

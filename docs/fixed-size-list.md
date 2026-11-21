@@ -142,7 +142,7 @@ int idx = list.IndexOf(30);   // 0
 | `Clear()` | `void` | Resets `Count` to zero; clears references for GC if `T` is a reference type |
 | `CopyTo(T[] array, int arrayIndex)` | `void` | Copies active elements to the target array |
 | `ToArray()` | `T[]` | Returns a new array containing the active elements |
-| `GetEnumerator()` | `IEnumerator<T>` | Returns an enumerator (implements `IEnumerable<T>`) |
+| `GetEnumerator()` | `Enumerator` | Returns a zero-alloc struct enumerator (implements `IEnumerable<T>`) |
 
 ## Choosing Between the Two
 

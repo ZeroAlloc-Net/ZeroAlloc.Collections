@@ -155,12 +155,64 @@ public sealed class HeapFixedSizeList<T> : IList<T>, IReadOnlyList<T>
         return result;
     }
 
-    /// <inheritdoc/>
-    public IEnumerator<T> GetEnumerator()
-    {
-        for (int i = 0; i < _count; i++)
-            yield return _items[i];
-    }
+    /// <summary>
+    /// Returns a struct enumerator over the elements in index order, so a <c>foreach</c> does not
+    /// allocate. Enumerating through <see cref="IEnumerable{T}"/> boxes it.
+    /// </summary>
+    public Enumerator GetEnumerator() => new(this);
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>
+    /// Enumerates the elements of a <see cref="HeapFixedSizeList{T}"/> in index order. Each step
+    /// reads the list's current contents.
+    /// </summary>
+    public struct Enumerator : IEnumerator<T>
+    {
+        private readonly HeapFixedSizeList<T> _list;
+        private int _index;
+        private T _current;
+
+        internal Enumerator(HeapFixedSizeList<T> list)
+        {
+            _list = list;
+            _index = -1;
+            _current = default!;
+        }
+
+        /// <summary>Gets the element at the current position of the enumerator.</summary>
+        public readonly T Current => _current;
+
+        readonly object? IEnumerator.Current => _current;
+
+        /// <summary>Advances the enumerator to the next element.</summary>
+        /// <returns><see langword="true"/> if there is a next element; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            var list = _list;
+            int index = _index + 1;
+            if (index < list._count)
+            {
+                _index = index;
+                _current = list._items[index];
+                return true;
+            }
+            _index = list._count;
+            _current = default!;
+            return false;
+        }
+
+        /// <summary>Sets the enumerator back to its initial position, before the first element.</summary>
+        public void Reset()
+        {
+            _index = -1;
+            _current = default!;
+        }
+
+        /// <summary>Does nothing: the enumerator holds no resources.</summary>
+        public readonly void Dispose() { }
+    }
 }

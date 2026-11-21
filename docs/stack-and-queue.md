@@ -77,7 +77,7 @@ stack.TryPop(out item);          // false — stack is empty
 
 ### Enumeration and ToArray
 
-The ref struct variant provides a `ref struct Enumerator` that iterates **top-to-bottom** and returns `ref readonly T Current`. The class variant returns `IEnumerator<T>` in the same order.
+The ref struct variant provides a `ref struct Enumerator` that iterates **top-to-bottom** and returns `ref readonly T Current`. The class variant returns a public struct `Enumerator` in the same order, so its `foreach` does not allocate either.
 
 `ToArray()` returns a new array in **top-first** order (the same order as enumeration).
 
@@ -166,7 +166,7 @@ Enqueue(F) triggers grow:
 
 ### Enumeration and ToArray
 
-Both variants enumerate in **FIFO order** (head to tail). The ref struct variant uses a zero-allocation `ref struct Enumerator`; the class variant returns `IEnumerator<T>`.
+Both variants enumerate in **FIFO order** (head to tail). The ref struct variant uses a zero-allocation `ref struct Enumerator`; the class variant returns a zero-allocation public struct `Enumerator`.
 
 `ToArray()` returns a new array in FIFO order.
 
@@ -271,7 +271,7 @@ public void BreadthFirst(TreeNode root, Action<TreeNode> visit)
 | Method | `bool TryPeek(out T item)` | Reads the top item without removing; returns `false` if empty. |
 | Method | `void Clear()` | Resets count to zero; retains buffer. |
 | Method | `T[] ToArray()` | New array in top-first order. |
-| Method | `IEnumerator<T> GetEnumerator()` | Returns an `IEnumerator<T>` (top-to-bottom). |
+| Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (top-to-bottom). |
 | Method | `void Dispose()` | Returns the rented buffer to the pool. |
 
 ### PooledQueue&lt;T&gt; (ref struct)
@@ -305,5 +305,5 @@ public void BreadthFirst(TreeNode root, Action<TreeNode> visit)
 | Method | `bool TryPeek(out T item)` | Reads the head without removing; returns `false` if empty. |
 | Method | `void Clear()` | Resets head, tail, and count; retains buffer. |
 | Method | `T[] ToArray()` | New array in FIFO order. |
-| Method | `IEnumerator<T> GetEnumerator()` | Returns an `IEnumerator<T>` (FIFO order). |
+| Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (FIFO order). |
 | Method | `void Dispose()` | Returns the rented buffer to the pool. |

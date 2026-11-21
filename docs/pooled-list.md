@@ -142,7 +142,7 @@ foreach (ref readonly LargeStruct item in list)
 }
 ```
 
-`HeapPooledList<T>` uses `IEnumerator<T>` via `yield return`, which does allocate. If you need allocation-free iteration on the heap variant, call `AsSpan()` and iterate the span instead.
+`HeapPooledList<T>.GetEnumerator()` returns a public struct `Enumerator`, so a `foreach` over the heap variant allocates nothing either. It yields elements by value; call `AsSpan()` when you want references into the backing array. Enumerating through `IEnumerable<T>`, for example with LINQ, boxes the enumerator.
 
 ## ToArray and CopyTo
 
@@ -270,5 +270,5 @@ Copy to an array with `ToArray()` if the data must outlive the list.
 | Method | `int IndexOf(T item)` | Index of first occurrence, or `-1`. |
 | Method | `bool Remove(T item)` | Removes first occurrence; returns `true` if found. |
 | Method | `void CopyTo(T[] array, int arrayIndex)` | Copies elements to a target array. |
-| Method | `IEnumerator<T> GetEnumerator()` | Returns an `IEnumerator<T>`. |
+| Method | `Enumerator GetEnumerator()` | Returns a zero-alloc struct enumerator. |
 | Method | `void Dispose()` | Returns the rented buffer to the pool. |

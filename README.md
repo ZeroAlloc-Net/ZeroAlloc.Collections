@@ -80,7 +80,7 @@ BenchmarkDotNet, N = 1,000. Time is the same-run ratio against the BCL type; all
 | Enqueue and dequeue N items | `Queue<int>` | 0.79× | 8,432 B | 0 B |
 | Write and read N items, capacity known | `Queue<int>` | 0.47× | 4,064 B | 0 B |
 
-The `Heap*` classes allocate one enumerator per `foreach`. Every workload, with the full numbers: [docs/performance.md](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md).
+The `Heap*` classes enumerate with public struct enumerators, so their `foreach` allocates nothing either. Every workload, with the full numbers: [docs/performance.md](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/blob/main/docs/performance.md).
 
 ## Learn more
 

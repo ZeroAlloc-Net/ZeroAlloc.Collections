@@ -140,15 +140,13 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
         return result;
     }
 
-    /// <summary>Returns an enumerator that iterates through the queue in FIFO order.</summary>
-    public IEnumerator<T> GetEnumerator()
-    {
-        for (int i = 0, index = _head; i < _count; i++)
-        {
-            yield return _array![index];
-            if (++index == _array.Length) index = 0;
-        }
-    }
+    /// <summary>
+    /// Returns a struct enumerator that iterates through the queue in FIFO order, so a
+    /// <c>foreach</c> does not allocate. Enumerating through <see cref="IEnumerable{T}"/> boxes it.
+    /// </summary>
+    public Enumerator GetEnumerator() => new(this);
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
     /// <inheritdoc/>
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
@@ -186,5 +184,63 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
         _array = newArray;
         _head = 0;
         _tail = _count;
+    }
+
+    /// <summary>
+    /// Enumerates the elements of a <see cref="HeapPooledQueue{T}"/> in FIFO order, starting at the
+    /// element that was at the head when the enumerator was created.
+    /// </summary>
+    public struct Enumerator : IEnumerator<T>
+    {
+        private readonly HeapPooledQueue<T> _queue;
+        private int _position;
+        private int _slot;
+        private T _current;
+
+        internal Enumerator(HeapPooledQueue<T> queue)
+        {
+            _queue = queue;
+            _position = -1;
+            _slot = queue._head;
+            _current = default!;
+        }
+
+        /// <summary>Gets the element at the current position of the enumerator.</summary>
+        public readonly T Current => _current;
+
+        readonly object? IEnumerator.Current => _current;
+
+        /// <summary>Advances the enumerator to the next element.</summary>
+        /// <returns><see langword="true"/> if there is a next element; otherwise, <see langword="false"/>.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool MoveNext()
+        {
+            var queue = _queue;
+            int position = _position + 1;
+            if (position < queue._count)
+            {
+                var array = queue._array!;
+                int slot = _slot;
+                if (position > 0 && ++slot == array.Length) slot = 0;
+                _slot = slot;
+                _position = position;
+                _current = array[slot];
+                return true;
+            }
+            _position = queue._count;
+            _current = default!;
+            return false;
+        }
+
+        /// <summary>Sets the enumerator back to its initial position, before the current head element.</summary>
+        public void Reset()
+        {
+            _position = -1;
+            _slot = _queue._head;
+            _current = default!;
+        }
+
+        /// <summary>Does nothing: the enumerator holds no resources.</summary>
+        public readonly void Dispose() { }
     }
 }

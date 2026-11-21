@@ -104,7 +104,7 @@ ring.IsFull;  // true
 
 ## Enumeration
 
-Both variants enumerate in FIFO order (head to tail). The ref struct version uses a zero-allocation `ref struct Enumerator`; the heap version returns `IEnumerator<T>`.
+Both variants enumerate in FIFO order (head to tail). The ref struct version uses a zero-allocation `ref struct Enumerator`; the heap version returns a zero-allocation public struct `Enumerator`.
 
 ```csharp
 using var ring = new RingBuffer<int>(8);
@@ -183,5 +183,5 @@ public double RollingAverage(ReadOnlySpan<double> samples, int windowSize)
 | Method | `bool TryPeek(out T item)` | Reads the head without removing; returns `false` if empty. |
 | Method | `void Clear()` | Resets head, tail, and count; retains buffer. |
 | Method | `T[] ToArray()` | Copies elements to a new array in FIFO order. |
-| Method | `IEnumerator<T> GetEnumerator()` | Returns an `IEnumerator<T>` (FIFO order). |
+| Method | `Enumerator GetEnumerator()` | Zero-alloc struct enumerator (FIFO order). |
 | Method | `void Dispose()` | Returns the rented buffer to the pool. |

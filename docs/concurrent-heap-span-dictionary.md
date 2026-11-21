@@ -52,7 +52,7 @@ public sealed class ConcurrentHeapSpanDictionary<TKey, TValue>
     public TKey[]                     ToKeysArray();
     public TValue[]                   ToValuesArray();
     public KeyValuePair<TKey,TValue>[] ToArray();
-    public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator();
+    public Enumerator                 GetEnumerator();   // struct enumerator over a snapshot
 
     public void Dispose();
 }
@@ -76,7 +76,7 @@ Why: the value proposition is pooled bucket allocation, not beating `ConcurrentD
 
 `GetEnumerator()` / `foreach` iterates a **snapshot** taken under the lock. Iteration itself does not hold the lock and is safe under concurrent writes — but items added after you started iterating will not appear.
 
-The snapshot is copied into a buffer rented from `ArrayPool<T>.Shared` and returned when the enumerator is disposed, which `foreach` always does. A `foreach` therefore allocates only the enumerator object, 32 B on x64 regardless of the entry count. An enumerator you drive by hand must be disposed, or its buffer is not returned to the pool. `ToArray()`, `ToKeysArray()` and `ToValuesArray()` still allocate a new array of the current size, by design.
+The snapshot is copied into a buffer rented from `ArrayPool<T>.Shared` and returned when the enumerator is disposed, which `foreach` always does. `GetEnumerator()` returns a public struct `Enumerator`, so a `foreach` allocates nothing, regardless of the entry count. Enumerating through `IEnumerable<T>` boxes the enumerator. An enumerator you drive by hand must be disposed exactly once, or its buffer is not returned to the pool. Do not copy it: copies share the rented buffer, and disposing two of them returns it to the pool twice. `ToArray()`, `ToKeysArray()` and `ToValuesArray()` still allocate a new array of the current size, by design.
 
 ## Disposal
 
