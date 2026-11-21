@@ -143,14 +143,16 @@ public sealed class HeapPooledList<T> : IList<T>, IReadOnlyList<T>, IDisposable
     }
 
     /// <summary>
-    /// Returns the rented buffer to the pool.
+    /// Returns the rented buffer to the pool and empties the list. Safe to call multiple times.
     /// </summary>
     public void Dispose()
     {
-        if (_array is not null)
+        var array = _array;
+        if (array is not null)
         {
-            _pool.Return(_array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             _array = null;
+            _count = 0;
+            _pool.Return(array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 

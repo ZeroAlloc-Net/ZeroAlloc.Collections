@@ -152,14 +152,18 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
-    /// Returns the rented array to the pool.
+    /// Returns the rented array to the pool and empties the queue. Safe to call multiple times.
     /// </summary>
     public void Dispose()
     {
-        if (_array is not null)
+        var array = _array;
+        if (array is not null)
         {
-            _pool.Return(_array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
             _array = null;
+            _head = 0;
+            _tail = 0;
+            _count = 0;
+            _pool.Return(array, clearArray: RuntimeHelpers.IsReferenceOrContainsReferences<T>());
         }
     }
 

@@ -60,10 +60,39 @@ public class HeapStructEnumeratorTests
     }
 
     [Fact]
-    public void HeapPooledList_Empty_EnumeratesNothing()
+    public void HeapPooledList_EmptyAndDisposed_EnumerateNothing()
     {
-        using var list = new HeapPooledList<int>();
+        var list = new HeapPooledList<int>();
         Assert.Empty(EnumerateList(list));
+        list.Add(1);
+        list.Dispose();
+        Assert.Empty(EnumerateList(list));
+    }
+
+    [Fact]
+    public void Dispose_EmptiesTheList_QueueAndRingBuffer()
+    {
+        var list = new HeapPooledList<int>();
+        list.Add(1);
+        list.Dispose();
+        Assert.Empty(list);
+        list.Add(2);
+        Assert.Equal(new[] { 2 }, list.ToArray());
+        list.Dispose();
+
+        var queue = new HeapPooledQueue<int>();
+        queue.Enqueue(1);
+        queue.Dispose();
+        Assert.Empty(queue);
+        queue.Enqueue(2);
+        Assert.Equal(new[] { 2 }, queue.ToArray());
+        queue.Dispose();
+
+        var ring = new HeapRingBuffer<int>(4);
+        ring.TryWrite(1);
+        ring.Dispose();
+        Assert.Empty(ring);
+        Assert.True(ring.IsEmpty);
     }
 
     // --- HeapFixedSizeList ---
