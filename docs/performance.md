@@ -202,9 +202,9 @@ instead of 2.42. The allocations are exact.
 | `HeapSpanDictionary<int, int>.Keys.Count` | 0.02 | 0 B |
 | `ConcurrentHeapSpanDictionary<int, int>` | 8.38 | 0 B |
 
-> In 1.x, measured on .NET 9, these allocated 32 to 56 B per `foreach` and the lists ran at about 2.2 times `List<int>`. The dictionaries scan every slot of their open-addressing table, and `ConcurrentHeapSpanDictionary` also copies a snapshot under its lock.
+> In 1.x, measured on .NET 9, these allocated 32 to 56 B per `foreach` and the lists ran at about 2.2 times `List<int>`. The dictionaries scan every slot of their open-addressing table, and `ConcurrentHeapSpanDictionary` also copies a snapshot under its lock. The 0 B in its row holds once the pool supplies the snapshot buffer.
 
-The key metric is the **ZA alloc** column. The `ref struct` collections target 0 B allocated on all paths except initial pool rent and `ToArray()`. The `Heap*` collections additionally allocate the collection object itself; their `foreach` allocates nothing, as described in [Zero-Allocation Enumerators](#3-zero-allocation-enumerators).
+The key metric is the **ZA alloc** column. The `ref struct` collections target 0 B allocated on all paths except initial pool rent and `ToArray()`. The `Heap*` collections additionally allocate the collection object itself; their `foreach` allocates nothing, as described in [Zero-Allocation Enumerators](#3-zero-allocation-enumerators), except that `ConcurrentHeapSpanDictionary` allocates its snapshot buffer when the pool has none to lend.
 
 ## When Zero Allocation Matters
 
@@ -229,7 +229,7 @@ If your profiler or allocation tracker does not show collection operations as a 
 
 1. **Pre-size your collections** — pass a `capacity` parameter to the constructor. This avoids grow operations entirely when you know the approximate size.
 
-2. **Use `ref struct` variants on hot paths** — they enforce stack-only lifetime and produce zero-alloc enumerators. Reserve `Heap*` variants for async code and long-lived storage; their struct enumerators make `foreach` allocation-free too, as long as you do not enumerate them through `IEnumerable<T>`.
+2. **Use `ref struct` variants on hot paths** — they enforce stack-only lifetime and produce zero-alloc enumerators. Reserve `Heap*` variants for async code and long-lived storage; their struct enumerators make `foreach` allocation-free too, as long as you do not enumerate them through `IEnumerable<T>`. For `ConcurrentHeapSpanDictionary` that also needs the array pool to supply the snapshot buffer.
 
 3. **Use `AsSpan()` instead of enumeration for bulk processing** — span-based iteration is faster than enumerator-based iteration because there is no `MoveNext()` / `Current` overhead.
 
