@@ -163,8 +163,9 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
 
     /// <summary>
     /// Enumerates the elements of a <see cref="HeapRingBuffer{T}"/> in FIFO order. The enumerator
-    /// visits the elements the buffer held when it was created, or when it was last reset, and ends
-    /// early when the buffer is disposed.
+    /// captures the head and the count when it is created or reset, and reads the slots as they are
+    /// at each step: a read, write or clear during the enumeration shows in the values it yields.
+    /// Disposing the buffer ends the enumeration.
     /// </summary>
     public struct Enumerator : IEnumerator<T>
     {

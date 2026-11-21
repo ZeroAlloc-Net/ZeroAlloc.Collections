@@ -64,7 +64,7 @@ foreach (ref readonly var item in list)
 
 The `ref readonly` return also means no defensive copy for large value types.
 
-The `Heap*` classes cannot use `ref struct` enumerators, because they implement `IEnumerable<T>`. Since 2.0.0 their `GetEnumerator()` returns a public struct `Enumerator` instead, as `List<T>` does, so a `foreach` over `HeapPooledList<T>`, `HeapPooledQueue<T>`, `HeapPooledStack<T>`, `HeapFixedSizeList<T>`, `HeapRingBuffer<T>`, `HeapSpanDictionary<TKey, TValue>` or `ConcurrentHeapSpanDictionary<TKey, TValue>` allocates nothing. The same holds for a `foreach` over `HeapSpanDictionary.Keys` and `.Values`, which return `KeyCollection` and `ValueCollection` with struct enumerators of their own. `ConcurrentHeapSpanDictionary` copies its snapshot into a pooled buffer that the enumerator returns on `Dispose`. Enumerating any of them through `IEnumerable<T>`, for example with LINQ, boxes the enumerator. In 1.x each `foreach` allocated a 32 to 56 B enumerator object.
+The `Heap*` classes cannot use `ref struct` enumerators, because they implement `IEnumerable<T>`. Since 2.0.0 their `GetEnumerator()` returns a public struct `Enumerator` instead, as `List<T>` does, so a `foreach` over `HeapPooledList<T>`, `HeapPooledQueue<T>`, `HeapPooledStack<T>`, `HeapFixedSizeList<T>`, `HeapRingBuffer<T>`, `HeapSpanDictionary<TKey, TValue>` or `ConcurrentHeapSpanDictionary<TKey, TValue>` allocates nothing. The same holds for a `foreach` over `HeapSpanDictionary.Keys` and `.Values`, which return `KeyCollection` and `ValueCollection` with struct enumerators of their own. `ConcurrentHeapSpanDictionary` copies its snapshot into a buffer rented from `ArrayPool<T>.Shared` that the enumerator returns on `Dispose`; when the pool has no buffer of that size yet, as on the first enumeration, the rent allocates one, and later enumerations reuse it. Enumerating any of them through `IEnumerable<T>`, for example with LINQ, boxes the enumerator. In 1.x each `foreach` allocated a 32 to 56 B enumerator object.
 
 Reading `HeapSpanDictionary.Keys` or `.Values`, and calling `Count` or `Contains` on them, allocates nothing: the views are created once and cached.
 
@@ -159,7 +159,7 @@ after the 2.0.0 changes; one launch, so no launch range.
 | 100 | 1.00 | 0.63 | 0.61 | 12,744 B | 7,352 B | 96 B |
 | 1,000 | 1.00 | 0.58 | 0.51 | 141,032 B | 73,128 B | 96 B |
 
-> The 96 B is the `ConcurrentHeapSpanDictionary` object and its `System.Threading.Lock`; its storage is pooled, and the `foreach` over it allocates nothing.
+> The 96 B is the `ConcurrentHeapSpanDictionary` object and its `System.Threading.Lock`; its storage is pooled, and the `foreach` over it reuses a pooled snapshot buffer, so it allocates nothing once the pool holds one.
 
 ### Write/read N items, capacity known up front
 
