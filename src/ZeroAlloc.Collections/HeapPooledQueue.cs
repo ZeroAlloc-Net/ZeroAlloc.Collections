@@ -191,21 +191,19 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
     }
 
     /// <summary>
-    /// Enumerates the elements of a <see cref="HeapPooledQueue{T}"/> in FIFO order, starting at the
-    /// element that was at the head when the enumerator was created.
+    /// Enumerates the elements of a <see cref="HeapPooledQueue{T}"/> in FIFO order. Each step reads
+    /// the queue's current contents, so the enumeration stays in order when the queue grows.
     /// </summary>
     public struct Enumerator : IEnumerator<T>
     {
         private readonly HeapPooledQueue<T> _queue;
         private int _position;
-        private int _slot;
         private T _current;
 
         internal Enumerator(HeapPooledQueue<T> queue)
         {
             _queue = queue;
             _position = -1;
-            _slot = queue._head;
             _current = default!;
         }
 
@@ -224,9 +222,8 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
             if (position < queue._count)
             {
                 var array = queue._array!;
-                int slot = _slot;
-                if (position > 0 && ++slot == array.Length) slot = 0;
-                _slot = slot;
+                int slot = queue._head + position;
+                if (slot >= array.Length) slot -= array.Length;
                 _position = position;
                 _current = array[slot];
                 return true;
@@ -236,11 +233,10 @@ public sealed class HeapPooledQueue<T> : IReadOnlyCollection<T>, IDisposable
             return false;
         }
 
-        /// <summary>Sets the enumerator back to its initial position, before the current head element.</summary>
+        /// <summary>Sets the enumerator back to its initial position, before the head element.</summary>
         public void Reset()
         {
             _position = -1;
-            _slot = _queue._head;
             _current = default!;
         }
 

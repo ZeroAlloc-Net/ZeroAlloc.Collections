@@ -196,7 +196,8 @@ public sealed class HeapPooledStack<T> : IReadOnlyCollection<T>, IDisposable
 
     /// <summary>
     /// Enumerates the elements of a <see cref="HeapPooledStack{T}"/> from top to bottom, starting
-    /// at the element that was on top when the enumerator was created.
+    /// at the element that was on top when the enumerator was created. Elements popped since are
+    /// skipped, and a disposed stack ends the enumeration.
     /// </summary>
     public struct Enumerator : IEnumerator<T>
     {
@@ -221,7 +222,9 @@ public sealed class HeapPooledStack<T> : IReadOnlyCollection<T>, IDisposable
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool MoveNext()
         {
-            int index = _index - 1;
+            // Bounded by the live count, so popping, clearing or disposing the stack during the
+            // enumeration never reads a slot that no longer holds an element.
+            int index = Math.Min(_index, _stack._count) - 1;
             if (index >= 0)
             {
                 _index = index;

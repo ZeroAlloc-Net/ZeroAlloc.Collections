@@ -300,7 +300,10 @@ using (var queue = new HeapPooledQueue<SmokeKey?>(capacity: 2))
     foreach (var pair in concurrent) { seen++; if (pair.Value is null) nulls++; }
     if (seen != 12 || nulls != 6 || keySum != 1)
         return Fail($"Heap* struct enumerators expected 12 items, 6 nulls and key sum 1, got {seen}, {nulls} and {keySum}");
-    if (heapStack.ToArray()[0] is not null) return Fail("HeapPooledStack enumeration order is not top to bottom");
+    var stackOrder = new List<Guid?>();
+    foreach (var v in heapStack) stackOrder.Add(v);
+    if (stackOrder.Count != 2 || stackOrder[0] is not null || stackOrder[1] != id)
+        return Fail("HeapPooledStack enumeration order is not top to bottom");
     Console.WriteLine("AOT smoke: Heap* struct enumerators OK");
 }
 

@@ -128,6 +128,21 @@ public class HeapStructEnumeratorTests
     }
 
     [Fact]
+    public void HeapPooledStack_Enumerator_SkipsPoppedElements_AndEndsWhenDisposed()
+    {
+        var stack = new HeapPooledStack<int>();
+        for (int i = 0; i < 4; i++) stack.Push(i);
+
+        var popped = stack.GetEnumerator();
+        stack.TryPop(out _);
+        Assert.Equal(new[] { 2, 1, 0 }, Drain(ref popped));
+
+        var disposed = stack.GetEnumerator();
+        stack.Dispose();
+        Assert.False(disposed.MoveNext());
+    }
+
+    [Fact]
     public void HeapPooledStack_Empty_EnumeratesNothing()
     {
         using var stack = new HeapPooledStack<int>();
@@ -141,7 +156,8 @@ public class HeapStructEnumeratorTests
     [Fact]
     public void HeapPooledQueue_EnumeratesInFifoOrder_AcrossTheWrap()
     {
-        using var queue = new HeapPooledQueue<int>(4);
+        // ArrayPool<T>.Shared rents at least 16 slots; an exact-size pool makes four writes wrap.
+        using var queue = new HeapPooledQueue<int>(4, new ExactSizePool<int>());
         for (int i = 0; i < 4; i++) queue.Enqueue(i);
         queue.TryDequeue(out _);
         queue.TryDequeue(out _);
@@ -153,6 +169,20 @@ public class HeapStructEnumeratorTests
         e.Reset();
         Assert.Equal(new[] { 2, 3, 4, 5 }, Drain(ref e));
         Assert.Equal(queue.ToArray(), ((IEnumerable<int>)queue).ToArray());
+    }
+
+    [Fact]
+    public void HeapPooledQueue_EnumeratorCreatedBeforeAGrow_StaysInOrder()
+    {
+        using var queue = new HeapPooledQueue<int>(4, new ExactSizePool<int>());
+        for (int i = 0; i < 4; i++) queue.Enqueue(i);
+        queue.TryDequeue(out _);
+        queue.Enqueue(4);
+
+        // The head sits at slot 1; growing moves it to slot 0.
+        var e = queue.GetEnumerator();
+        queue.Enqueue(5);
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, Drain(ref e));
     }
 
     [Fact]
@@ -193,6 +223,20 @@ public class HeapStructEnumeratorTests
         Assert.False(e.MoveNext());
         e.Reset();
         Assert.Equal(new[] { 1, 2, 3 }, Drain(ref e));
+    }
+
+    [Fact]
+    public void HeapRingBuffer_Enumerator_EndsWhenDisposed()
+    {
+        var ring = new HeapRingBuffer<int>(4);
+        ring.TryWrite(1);
+        ring.TryWrite(2);
+
+        var e = ring.GetEnumerator();
+        Assert.True(e.MoveNext());
+        ring.Dispose();
+        Assert.False(e.MoveNext());
+        Assert.Equal(0, e.Current);
     }
 
     // --- HeapSpanDictionary ---
@@ -383,5 +427,13 @@ public class HeapStructEnumeratorTests
         var items = new List<int>();
         foreach (var item in list) items.Add(item);
         return items;
+    }
+
+    /// <summary>Rents arrays of exactly the requested length, so wrap-around is deterministic.</summary>
+    private sealed class ExactSizePool<T> : System.Buffers.ArrayPool<T>
+    {
+        public override T[] Rent(int minimumLength) => new T[minimumLength];
+
+        public override void Return(T[] array, bool clearArray = false) { }
     }
 }

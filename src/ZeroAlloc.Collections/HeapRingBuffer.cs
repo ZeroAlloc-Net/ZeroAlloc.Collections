@@ -163,7 +163,8 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
 
     /// <summary>
     /// Enumerates the elements of a <see cref="HeapRingBuffer{T}"/> in FIFO order. The enumerator
-    /// visits the elements the buffer held when it was created, or when it was last reset.
+    /// visits the elements the buffer held when it was created, or when it was last reset, and ends
+    /// early when the buffer is disposed.
     /// </summary>
     public struct Enumerator : IEnumerator<T>
     {
@@ -195,7 +196,9 @@ public sealed class HeapRingBuffer<T> : IReadOnlyCollection<T>, IDisposable
         public bool MoveNext()
         {
             int position = _position + 1;
-            if (position < _count)
+            // Dispose returns the captured array to the pool, where another renter may overwrite
+            // it, so a disposed buffer ends the enumeration instead of reading that array.
+            if (position < _count && _buffer._array is not null)
             {
                 int slot = _slot;
                 if (position > 0 && ++slot == _buffer._capacity) slot = 0;
