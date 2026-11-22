@@ -34,6 +34,19 @@ CI job `aot-smoke`:
 CI job `baseline-checks` (`baseline-checks.yml`) runs the shared gitleaks, CodeQL and NuGetAudit
 baseline. CI job `api-compat` runs the shared API compatibility check.
 
+CI job `sdk10-consumer` needs a 10.0.1xx SDK; `tests/ZeroAlloc.Collections.Sdk10Smoke/global.json` pins
+10.0.100 with `rollForward: latestPatch`, so a newer band cannot stand in for it. It builds and runs a
+consumer of the packed package with Roslyn 5.0:
+
+```bash
+dotnet pack src/ZeroAlloc.Collections -c Release -o artifacts -p:Version=9.9.9-local.<sha>
+cd tests/ZeroAlloc.Collections.Sdk10Smoke/Consumer
+dotnet run -c Release -p:ZeroAllocCollectionsVersion=9.9.9-local.<sha>
+```
+
+CI job `roslyn-floor` calls the shared `roslyn-floor.yml` from ZeroAlloc-Net/.github: it packs the
+solution and fails when a packed DLL references Roslyn above 5.0.0.
+
 Fast inner loop (run locally, passes):
 - `dotnet build ZeroAlloc.Collections.slnx -c Release`
 - `dotnet test tests/ZeroAlloc.Collections.Tests -c Release --no-build -f net10.0 --filter "FullyQualifiedName~AllocationTests"`
@@ -52,6 +65,11 @@ The benchmark project targets only `net10.0`, the library's LTS target. Benchmar
   Do not edit `PublicAPI.Shipped.txt`; a release PR moves entries there.
 - The same applies to generator diagnostics: new rules go in
   `src/ZeroAlloc.Collections.Generators/AnalyzerReleases.Unshipped.md`.
+- The generators reference `Microsoft.CodeAnalysis.CSharp` 5.0.0, the compiler of SDK band 10.0.1xx, the
+  oldest supported SDK. A compiler older than the Roslyn the generator references skips it with `CS9057`,
+  and nothing is generated. The shared Renovate preset holds it below 5.1. If a newer Roslyn API is
+  needed, change the code; raise the floor only together with the minimum SDK. The test project may use
+  a newer Roslyn.
 - The generator project is `netstandard2.0` with `EnforceExtendedAnalyzerRules`. Do not use APIs
   newer than netstandard2.0 there, and keep it incremental: `IncrementalCachingTests` guards caching.
   The tests project references it as an analyzer and as an assembly, so tests can call its `internal`
