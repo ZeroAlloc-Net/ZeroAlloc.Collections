@@ -34,3 +34,11 @@ ZAC001  | ZeroAlloc.Collections.Generators | Warning      | Usage        | Warni
 Rule ID | Category                         | Severity | Notes
 --------|----------------------------------|----------|----------------------------------------------------------
 ZAC013  | ZeroAlloc.Collections.Generators | Warning  | Nested type inside a containing type that is not partial
+
+## Release 2.0.0
+
+### Changed Rules
+
+Rule ID | New Category                     | New Severity | Old Category                     | Old Severity | Notes
+--------|----------------------------------|--------------|----------------------------------|--------------|----------------------------------------------------------
+ZAC013  | ZeroAlloc.Collections.Generators | Error        | ZeroAlloc.Collections.Generators | Warning      | Nested type inside a containing type that is not partial

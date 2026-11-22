@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.0.0](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.3.1...v2.0.0) (2026-11-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* netstandard2.1, net8.0 and net9.0 assets are no longer shipped; GetEnumerator on HeapPooledList, HeapPooledQueue, HeapPooledStack, HeapFixedSizeList, HeapRingBuffer, HeapSpanDictionary and ConcurrentHeapSpanDictionary returns a public struct Enumerator; HeapSpanDictionary.Keys and .Values return KeyCollection and ValueCollection; IsReadOnly, Add, Remove and Clear on those views are now explicit ICollection<T> members; the ConcurrentHeapSpanDictionary enumerator owns a pooled buffer and must be disposed exactly once and not copied; enumerating a HeapSpanDictionary throws InvalidOperationException when a key is added or the dictionary is cleared or disposed during the loop; ZAC013 is now an error; Dispose now empties HeapPooledList, HeapPooledQueue and HeapRingBuffer. See the migration notes in the release.
+
+### Features
+
+* return KeyCollection and ValueCollection with struct enumerators from HeapSpanDictionary Keys and Values ([19b3c16](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/19b3c16371cb9026750da4ea6c3edf57c6ca810a))
+* return struct enumerators from the Heap* collections so foreach allocates nothing ([19b3c16](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/19b3c16371cb9026750da4ea6c3edf57c6ca810a))
+* target net10.0 and net11.0, drop netstandard2.1, net8.0 and net9.0 ([19b3c16](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/19b3c16371cb9026750da4ea6c3edf57c6ca810a))
+
+
+### Bug Fixes
+
+* empty HeapPooledList, HeapPooledQueue and HeapRingBuffer on Dispose ([19b3c16](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/19b3c16371cb9026750da4ea6c3edf57c6ca810a))
+* **generators:** report ZAC013 as an error instead of skipping generation with a warning ([19b3c16](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/19b3c16371cb9026750da4ea6c3edf57c6ca810a))
+* throw InvalidOperationException when a HeapSpanDictionary changes during its enumeration ([19b3c16](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/commit/19b3c16371cb9026750da4ea6c3edf57c6ca810a))
+
 ## [1.3.1](https://github.com/ZeroAlloc-Net/ZeroAlloc.Collections/compare/v1.3.0...v1.3.1) (2026-11-16)
 
 
