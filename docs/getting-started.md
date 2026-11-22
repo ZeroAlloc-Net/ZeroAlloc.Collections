@@ -18,6 +18,8 @@ dotnet add package ZeroAlloc.Collections
 
 The package targets `net10.0` and `net11.0`. Source generators for specialized collection types are bundled automatically — no additional package reference is required.
 
+The generators need the .NET 10 SDK 10.0.100 or later, or Visual Studio 2026 or later. They are built against Roslyn 5.0, and an older compiler skips them with warning CS9057, after which the generated members are missing. Version 2.0.0 was built against Roslyn 5.12 and loads only in the .NET 11 SDK; on .NET 10, use 2.0.1 or later.
+
 ## Your First Collection
 
 The following walkthrough creates a `PooledList<int>`, adds items, iterates them, and disposes the list to return its buffer to the pool.
